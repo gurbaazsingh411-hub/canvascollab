@@ -22,6 +22,63 @@ export type DocumentRole = Database["public"]["Enums"]["document_role"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 // Workspaces API
+export interface Todo {
+  id: string;
+  content: string;
+  completed: boolean;
+  created_at: string;
+}
+
+export const todosApi = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from("todos" as any)
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data as Todo[];
+  },
+
+  async create(content: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("No user found");
+
+    const { data, error } = await supabase
+      .from("todos" as any)
+      .insert({
+        content,
+        user_id: user.id
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Todo;
+  },
+
+  async toggle(id: string, completed: boolean) {
+    const { data, error } = await supabase
+      .from("todos" as any)
+      .update({ completed })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Todo;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from("todos" as any)
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+  }
+};
+
 export const workspacesApi = {
   async getAll() {
     const { data, error } = await supabase
