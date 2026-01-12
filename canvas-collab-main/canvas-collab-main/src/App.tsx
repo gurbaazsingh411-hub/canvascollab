@@ -10,6 +10,13 @@ import AuthPage from "./pages/AuthPage";
 import DocumentPage from "./pages/DocumentPage";
 import SpreadsheetPage from "./pages/SpreadsheetPage";
 import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
+import RecentPage from "./pages/RecentPage";
+import StarredPage from "./pages/StarredPage";
+import SharedPage from "./pages/SharedPage";
+import TrashPage from "./pages/TrashPage";
+import ProfileSettingsPage from "./pages/ProfileSettingsPage";
+import WorkspaceDocumentsPage from "./pages/WorkspaceDocumentsPage";
+import WorkspaceSpreadsheetsPage from "./pages/WorkspaceSpreadsheetsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +35,15 @@ const App = () => (
               <Route path="/document/:id" element={<DocumentPage />} />
               <Route path="/spreadsheet/:id" element={<SpreadsheetPage />} />
               <Route path="/workspace/:id/settings" element={<WorkspaceSettingsPage />} />
+
+              {/* New Pages */}
+              <Route path="/recent" element={<RecentPage />} />
+              <Route path="/starred" element={<StarredPage />} />
+              <Route path="/shared" element={<SharedPage />} />
+              <Route path="/trash" element={<TrashPage />} />
+              <Route path="/settings" element={<ProfileSettingsPage />} />
+              <Route path="/workspace/documents" element={<WorkspaceDocumentsPage />} />
+              <Route path="/workspace/spreadsheets" element={<WorkspaceSpreadsheetsPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
