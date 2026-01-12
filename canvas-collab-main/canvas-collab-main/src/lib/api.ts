@@ -63,6 +63,37 @@ export const workspacesApi = {
 
     if (error) throw error;
     return data;
+  },
+
+  async removeMember(workspaceId: string, userId: string) {
+    const { error } = await supabase
+      .from("workspace_members" as any)
+      .delete()
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", userId);
+
+    if (error) throw error;
+  },
+
+  async update(id: string, updates: { name: string }) {
+    const { data, error } = await supabase
+      .from("workspaces" as any)
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async delete(id: string) {
+    const { error } = await supabase
+      .from("workspaces" as any)
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
   }
 };
 

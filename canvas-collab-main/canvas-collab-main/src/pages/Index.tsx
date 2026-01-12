@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { FileCard } from "@/components/dashboard/FileCard";
 import { CreateNewButton } from "@/components/dashboard/CreateNewButton";
-import { LayoutGrid, List, Clock, Star, FileText, Table2, Loader2, Building, Plus } from "lucide-react";
+import { LayoutGrid, List, Clock, Star, FileText, Table2, Loader2, Building, Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -136,6 +136,14 @@ export default function Index() {
                 ))}
               </SelectContent>
             </Select>
+
+            {selectedWorkspaceId && (
+              <Button variant="ghost" size="icon" asChild>
+                <Link to={`/workspace/${selectedWorkspaceId}/settings`}>
+                  <Settings className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              </Button>
+            )}
 
             <Dialog open={isCreateWorkspaceOpen} onOpenChange={setIsCreateWorkspaceOpen}>
               <DialogTrigger asChild>

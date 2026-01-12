@@ -19,10 +19,26 @@ export function useWorkspaces() {
         },
     });
 
+    const updateWorkspace = useMutation({
+        mutationFn: ({ id, name }: { id: string; name: string }) => workspacesApi.update(id, { name }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+        },
+    });
+
+    const deleteWorkspace = useMutation({
+        mutationFn: (id: string) => workspacesApi.delete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+        },
+    });
+
     return {
         workspaces: workspacesQuery.data as Workspace[] | undefined,
         isLoading: workspacesQuery.isLoading,
         createWorkspace,
+        updateWorkspace,
+        deleteWorkspace,
     };
 }
 
@@ -43,9 +59,17 @@ export function useWorkspaceMembers(workspaceId: string | null) {
         },
     });
 
+    const removeMember = useMutation({
+        mutationFn: (userId: string) => workspacesApi.removeMember(workspaceId!, userId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["workspace-members", workspaceId] });
+        },
+    });
+
     return {
         members: membersQuery.data as WorkspaceMember[] | undefined,
         isLoading: membersQuery.isLoading,
         addMember,
+        removeMember,
     };
 }

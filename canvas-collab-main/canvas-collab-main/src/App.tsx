@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import DocumentPage from "./pages/DocumentPage";
 import SpreadsheetPage from "./pages/SpreadsheetPage";
+import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/document/:id" element={<DocumentPage />} />
               <Route path="/spreadsheet/:id" element={<SpreadsheetPage />} />
+              <Route path="/workspace/:id/settings" element={<WorkspaceSettingsPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
