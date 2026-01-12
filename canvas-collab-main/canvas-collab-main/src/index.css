@@ -1,0 +1,333 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Collaborative Docs - Professional Productivity Design System
+   Inspired by Linear, Notion, and modern productivity tools
+   Clean, minimal, functional elegance */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@layer base {
+  :root {
+    /* Core backgrounds */
+    --background: 0 0% 99%;
+    --foreground: 220 20% 10%;
+    
+    /* Card surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 10%;
+    
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 10%;
+    
+    /* Primary - Teal/Cyan accent for productivity */
+    --primary: 175 70% 35%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary surfaces */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 20% 10%;
+    
+    /* Muted elements */
+    --muted: 220 14% 95%;
+    --muted-foreground: 220 10% 45%;
+    
+    /* Accent highlights */
+    --accent: 175 60% 94%;
+    --accent-foreground: 175 70% 25%;
+    
+    /* Destructive actions */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Borders and inputs */
+    --border: 220 13% 90%;
+    --input: 220 13% 90%;
+    --ring: 175 70% 35%;
+    
+    /* Radius */
+    --radius: 0.5rem;
+    
+    /* Custom colors for docs/sheets */
+    --success: 142 70% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 10%;
+    --info: 210 100% 50%;
+    --info-foreground: 0 0% 100%;
+    
+    /* Collaboration colors */
+    --cursor-1: 280 100% 60%;
+    --cursor-2: 200 100% 50%;
+    --cursor-3: 30 100% 55%;
+    --cursor-4: 340 80% 55%;
+    
+    /* Surface layers */
+    --surface-1: 0 0% 100%;
+    --surface-2: 220 14% 98%;
+    --surface-3: 220 14% 96%;
+    
+    /* Toolbar */
+    --toolbar: 0 0% 100%;
+    --toolbar-foreground: 220 20% 10%;
+    --toolbar-border: 220 13% 92%;
+    
+    /* Sidebar */
+    --sidebar-background: 220 14% 98%;
+    --sidebar-foreground: 220 15% 25%;
+    --sidebar-primary: 175 70% 35%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 175 60% 94%;
+    --sidebar-accent-foreground: 175 70% 25%;
+    --sidebar-border: 220 13% 90%;
+    --sidebar-ring: 175 70% 35%;
+  }
+
+  .dark {
+    /* Core backgrounds */
+    --background: 225 25% 8%;
+    --foreground: 210 20% 95%;
+    
+    /* Card surfaces */
+    --card: 225 20% 11%;
+    --card-foreground: 210 20% 95%;
+    
+    /* Popover */
+    --popover: 225 20% 11%;
+    --popover-foreground: 210 20% 95%;
+    
+    /* Primary - Teal/Cyan accent */
+    --primary: 175 65% 45%;
+    --primary-foreground: 225 25% 8%;
+    
+    /* Secondary surfaces */
+    --secondary: 225 15% 15%;
+    --secondary-foreground: 210 20% 90%;
+    
+    /* Muted elements */
+    --muted: 225 15% 15%;
+    --muted-foreground: 220 10% 55%;
+    
+    /* Accent highlights */
+    --accent: 225 15% 18%;
+    --accent-foreground: 175 65% 55%;
+    
+    /* Destructive actions */
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Borders and inputs */
+    --border: 225 15% 18%;
+    --input: 225 15% 18%;
+    --ring: 175 65% 45%;
+    
+    /* Custom colors for docs/sheets */
+    --success: 142 60% 50%;
+    --success-foreground: 142 60% 10%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 38 92% 10%;
+    --info: 210 100% 55%;
+    --info-foreground: 210 100% 10%;
+    
+    /* Surface layers */
+    --surface-1: 225 20% 11%;
+    --surface-2: 225 18% 13%;
+    --surface-3: 225 15% 16%;
+    
+    /* Toolbar */
+    --toolbar: 225 20% 11%;
+    --toolbar-foreground: 210 20% 95%;
+    --toolbar-border: 225 15% 18%;
+    
+    /* Sidebar */
+    --sidebar-background: 225 20% 9%;
+    --sidebar-foreground: 210 15% 75%;
+    --sidebar-primary: 175 65% 45%;
+    --sidebar-primary-foreground: 225 25% 8%;
+    --sidebar-accent: 225 15% 15%;
+    --sidebar-accent-foreground: 175 65% 55%;
+    --sidebar-border: 225 15% 16%;
+    --sidebar-ring: 175 65% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  /* Smooth transitions for theme switching */
+  body, .transition-colors {
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+}
+
+@layer components {
+  /* Glass effect cards */
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50 shadow-lg;
+  }
+  
+  /* Floating toolbar style */
+  .floating-toolbar {
+    @apply bg-toolbar border border-toolbar-border rounded-lg shadow-lg;
+  }
+  
+  /* Document canvas */
+  .document-canvas {
+    @apply bg-card shadow-sm border border-border/50 rounded-lg;
+  }
+  
+  /* Spreadsheet cell */
+  .cell {
+    @apply border-r border-b border-border/60 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-inset;
+  }
+  
+  .cell-header {
+    @apply bg-muted font-medium text-muted-foreground text-center select-none;
+  }
+  
+  /* Presence indicator */
+  .presence-dot {
+    @apply w-2 h-2 rounded-full animate-pulse;
+  }
+  
+  /* File card hover effect */
+  .file-card {
+    @apply transition-all duration-200 hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5;
+  }
+  
+  /* Editor toolbar button */
+  .toolbar-button {
+    @apply p-2 rounded-md transition-colors hover:bg-muted text-muted-foreground hover:text-foreground;
+  }
+  
+  .toolbar-button.active {
+    @apply bg-primary/10 text-primary;
+  }
+  
+  /* Collaborator cursor */
+  .collaborator-cursor {
+    @apply absolute pointer-events-none z-50;
+  }
+  
+  .collaborator-cursor::before {
+    content: '';
+    @apply absolute w-0.5 h-5 rounded-full;
+    animation: cursor-blink 1.2s ease-in-out infinite;
+  }
+  
+  /* Sidebar item */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground;
+  }
+  
+  .sidebar-item.active {
+    @apply bg-sidebar-accent text-sidebar-accent-foreground font-medium;
+  }
+}
+
+@layer utilities {
+  /* Custom scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Text selection colors */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.25);
+    color: inherit;
+  }
+  
+  /* Focus visible ring */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+  
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70;
+  }
+  
+  /* Subtle grid pattern for spreadsheet background */
+  .grid-pattern {
+    background-image: 
+      linear-gradient(hsl(var(--border)) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px);
+    background-size: 100px 32px;
+  }
+}
+
+/* Animations */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.2s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.15s ease-out;
+}
