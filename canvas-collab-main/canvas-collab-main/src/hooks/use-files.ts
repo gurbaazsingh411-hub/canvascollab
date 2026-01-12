@@ -3,18 +3,18 @@ import { documentsApi, spreadsheetsApi, cellsApi, type Document, type Spreadshee
 import { useAuth } from "./use-auth";
 
 // Combined files hook (documents + spreadsheets)
-export function useFiles() {
+export function useFiles(workspaceId?: string) {
   const { user } = useAuth();
 
   const documentsQuery = useQuery({
-    queryKey: ["documents"],
-    queryFn: documentsApi.getAll,
+    queryKey: ["documents", workspaceId],
+    queryFn: () => documentsApi.getAll(workspaceId),
     enabled: !!user,
   });
 
   const spreadsheetsQuery = useQuery({
-    queryKey: ["spreadsheets"],
-    queryFn: spreadsheetsApi.getAll,
+    queryKey: ["spreadsheets", workspaceId],
+    queryFn: () => spreadsheetsApi.getAll(workspaceId),
     enabled: !!user,
   });
 
@@ -50,10 +50,11 @@ export function useCreateDocument() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: (title?: string) =>
+    mutationFn: ({ title, workspaceId }: { title?: string; workspaceId?: string } = {}) =>
       documentsApi.create({
         owner_id: user!.id,
         title: title || "Untitled Document",
+        ...((workspaceId ? { workspace_id: workspaceId } : {}) as any),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
@@ -111,10 +112,11 @@ export function useCreateSpreadsheet() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: (title?: string) =>
+    mutationFn: ({ title, workspaceId }: { title?: string; workspaceId?: string } = {}) =>
       spreadsheetsApi.create({
         owner_id: user!.id,
         title: title || "Untitled Spreadsheet",
+        ...((workspaceId ? { workspace_id: workspaceId } : {}) as any),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["spreadsheets"] });

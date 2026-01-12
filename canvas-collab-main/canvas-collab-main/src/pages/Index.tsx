@@ -3,21 +3,33 @@ import { useNavigate, Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { FileCard } from "@/components/dashboard/FileCard";
 import { CreateNewButton } from "@/components/dashboard/CreateNewButton";
-import { LayoutGrid, List, Clock, Star, FileText, Table2, Loader2 } from "lucide-react";
+import { LayoutGrid, List, Clock, Star, FileText, Table2, Loader2, Building, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useFiles, useCreateDocument, useCreateSpreadsheet, useToggleStar } from "@/hooks/use-files";
+import { useWorkspaces } from "@/hooks/use-workspaces";
 
 export default function Index() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { files, isLoading } = useFiles();
+
+  // Workspace State
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
+  const { workspaces, createWorkspace } = useWorkspaces();
+  const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
+
+  const { files, isLoading } = useFiles(selectedWorkspaceId || undefined);
   const createDocument = useCreateDocument();
   const createSpreadsheet = useCreateSpreadsheet();
   const toggleStar = useToggleStar();
-  
+
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filter, setFilter] = useState<"all" | "documents" | "spreadsheets">("all");
 
@@ -72,29 +84,89 @@ export default function Index() {
   };
 
   const handleCreateDocument = async () => {
-    const doc = await createDocument.mutateAsync(undefined);
+    const doc = await createDocument.mutateAsync({ workspaceId: selectedWorkspaceId || undefined });
     navigate(`/document/${doc.id}`);
   };
 
   const handleCreateSpreadsheet = async () => {
-    const sheet = await createSpreadsheet.mutateAsync(undefined);
+    const sheet = await createSpreadsheet.mutateAsync({ workspaceId: selectedWorkspaceId || undefined });
     navigate(`/spreadsheet/${sheet.id}`);
   };
 
-  const handleToggleStar = (id: string, type: "document" | "spreadsheet", currentStarred: boolean) => {
-    toggleStar.mutate({ id, type, starred: !currentStarred });
+  const handleCreateWorkspace = async () => {
+    if (!newWorkspaceName.trim()) return;
+    await createWorkspace.mutateAsync(newWorkspaceName);
+    setNewWorkspaceName("");
+    setIsCreateWorkspaceOpen(false);
   };
 
+  const currentWorkspace = workspaces?.find(w => w.id === selectedWorkspaceId);
+
   return (
-    <AppLayout title="Dashboard">
+    <AppLayout title={currentWorkspace ? currentWorkspace.name : "My Dashboard"}>
       <div className="p-6 space-y-8 animate-fade-in">
-        {/* Header */}
+        {/* Workspace Selector */}
+        <div className="flex items-center justify-between border-b border-border pb-6">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Building className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">
+                {currentWorkspace ? currentWorkspace.name : "Personal Workspace"}
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                {currentWorkspace ? "Shared with workspace members" : "Private files only you can see"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Select
+              value={selectedWorkspaceId || "personal"}
+              onValueChange={(val) => setSelectedWorkspaceId(val === "personal" ? null : val)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select Workspace" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="personal">Personal Workspace</SelectItem>
+                {workspaces?.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Dialog open={isCreateWorkspaceOpen} onOpenChange={setIsCreateWorkspaceOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Workspace</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                  <Label>Workspace Name</Label>
+                  <Input
+                    value={newWorkspaceName}
+                    onChange={(e) => setNewWorkspaceName(e.target.value)}
+                    placeholder="e.g. Marketing Team"
+                  />
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleCreateWorkspace}>Create Workspace</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
+        {/* Header Actions */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
-            <p className="text-muted-foreground">
-              Pick up where you left off or create something new.
-            </p>
+            <h2 className="text-2xl font-bold text-foreground">Overview</h2>
           </div>
           <CreateNewButton
             onCreateDocument={handleCreateDocument}
@@ -139,7 +211,7 @@ export default function Index() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <Clock className="h-5 w-5 text-muted-foreground" />
-              Recent Files
+              {currentWorkspace ? "Workspace Files" : "My Files"}
             </h2>
             <div className="flex items-center gap-2">
               <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
@@ -179,7 +251,9 @@ export default function Index() {
               <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
               <h3 className="font-medium text-foreground mb-1">No files yet</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Create your first document or spreadsheet to get started.
+                {currentWorkspace
+                  ? "This workspace is empty. Create a file to collaborate!"
+                  : "Create your first document or spreadsheet to get started."}
               </p>
               <CreateNewButton
                 onCreateDocument={handleCreateDocument}
@@ -199,7 +273,7 @@ export default function Index() {
                     starred: file.starred || false,
                   }}
                   onClick={() => handleFileClick(file)}
-                  onToggleStar={() => handleToggleStar(file.id, file.type, file.starred || false)}
+                  onToggleStar={() => toggleStar.mutate({ id: file.id, type: file.type, starred: !file.starred })}
                 />
               ))}
             </div>
@@ -241,7 +315,7 @@ export default function Index() {
                     starred: true,
                   }}
                   onClick={() => handleFileClick(file)}
-                  onToggleStar={() => handleToggleStar(file.id, file.type, true)}
+                  onToggleStar={() => toggleStar.mutate({ id: file.id, type: file.type, starred: !file.starred })}
                 />
               ))}
             </div>

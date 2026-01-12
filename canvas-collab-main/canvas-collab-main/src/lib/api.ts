@@ -9,25 +9,83 @@ export type Spreadsheet = Database["public"]["Tables"]["spreadsheets"]["Row"];
 export type SpreadsheetInsert = Database["public"]["Tables"]["spreadsheets"]["Insert"];
 export type SpreadsheetUpdate = Database["public"]["Tables"]["spreadsheets"]["Update"];
 
+
 export type SpreadsheetCell = Database["public"]["Tables"]["spreadsheet_cells"]["Row"];
 export type SpreadsheetCellInsert = Database["public"]["Tables"]["spreadsheet_cells"]["Insert"];
+
+export type Workspace = Database["public"]["Tables"]["workspaces"]["Row"];
+export type WorkspaceMember = Database["public"]["Tables"]["workspace_members"]["Row"];
 
 export type DocumentPermission = Database["public"]["Tables"]["document_permissions"]["Row"];
 export type DocumentRole = Database["public"]["Enums"]["document_role"];
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
-// Documents API
-export const documentsApi = {
+// Workspaces API
+export const workspacesApi = {
   async getAll() {
     const { data, error } = await supabase
-      .from("documents")
-      .select("*, profiles:owner_id(display_name, avatar_url)")
-      .order("updated_at", { ascending: false });
+      .from("workspaces" as any)
+      .select("*, owner:owner_id(display_name, avatar_url)")
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
     return data;
   },
+
+  async create(name: string, owner_id: string) {
+    const { data, error } = await supabase
+      .from("workspaces" as any)
+      .insert({ name, owner_id })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async getMembers(workspaceId: string) {
+    const { data, error } = await supabase
+      .from("workspace_members" as any)
+      .select("*, profile:user_id(display_name, email, avatar_url)")
+      .eq("workspace_id", workspaceId);
+
+    if (error) throw error;
+    return data;
+  },
+
+  async addMember(workspaceId: string, userId: string, role: string = 'member') {
+    const { data, error } = await supabase
+      .from("workspace_members" as any)
+      .insert({ workspace_id: workspaceId, user_id: userId, role })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+};
+
+// Documents API
+export const documentsApi = {
+  async getAll(workspaceId?: string) {
+    let query = supabase
+      .from("documents")
+      .select("*, profiles:owner_id(display_name, avatar_url)")
+      .order("updated_at", { ascending: false });
+
+    if (workspaceId) {
+      query = query.eq("workspace_id", workspaceId);
+    } else {
+      query = query.is("workspace_id", null);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data;
+  },
+
 
   async getById(id: string) {
     const { data, error } = await supabase
@@ -79,11 +137,19 @@ export const documentsApi = {
 
 // Spreadsheets API
 export const spreadsheetsApi = {
-  async getAll() {
-    const { data, error } = await supabase
+  async getAll(workspaceId?: string) {
+    let query = supabase
       .from("spreadsheets")
       .select("*, profiles:owner_id(display_name, avatar_url)")
       .order("updated_at", { ascending: false });
+
+    if (workspaceId) {
+      query = query.eq("workspace_id", workspaceId);
+    } else {
+      query = query.is("workspace_id", null);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data;
