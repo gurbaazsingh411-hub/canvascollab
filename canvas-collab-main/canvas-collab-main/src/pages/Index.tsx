@@ -139,11 +139,18 @@ export default function Index() {
             </Select>
 
             {selectedWorkspaceId && (
-              <Button variant="ghost" size="icon" asChild>
-                <Link to={`/workspace/${selectedWorkspaceId}/settings`}>
-                  <Settings className="h-4 w-4 text-muted-foreground" />
-                </Link>
-              </Button>
+              <>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/workspace/${selectedWorkspaceId}/analytics`}>
+                    Analytics
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="icon" asChild>
+                  <Link to={`/workspace/${selectedWorkspaceId}/settings`}>
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                  </Link>
+                </Button>
+              </>
             )}
 
             <Dialog open={isCreateWorkspaceOpen} onOpenChange={setIsCreateWorkspaceOpen}>

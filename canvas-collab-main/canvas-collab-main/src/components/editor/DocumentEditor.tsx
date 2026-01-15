@@ -8,6 +8,8 @@ import { Table } from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
+import HorizontalRule from "@tiptap/extension-horizontal-rule";
+import { PageBreak } from "@/lib/PageBreak";
 import { DocumentToolbar } from "./DocumentToolbar";
 import { CollaboratorPresence } from "./CollaboratorPresence";
 import { useDocument, useUpdateDocument } from "@/hooks/use-files";
@@ -58,6 +60,8 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       TableRow,
       TableHeader,
       TableCell,
+      HorizontalRule,
+      PageBreak,
     ],
     content: (document?.content as any) || "",
     editorProps: {

@@ -14,6 +14,7 @@ import {
   Redo,
   Minus,
   Link2,
+  SquareSplitVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -171,6 +172,14 @@ export function DocumentToolbar({ editor }: DocumentToolbarProps) {
         icon={Minus}
         label="Horizontal Rule"
         onClick={() => editor.chain().focus().setHorizontalRule().run()}
+      />
+      <ToolbarButton
+        icon={SquareSplitVertical}
+        label="Page Break"
+        onClick={() => {
+          // Insert page break
+          editor.chain().focus().setPageBreak().run();
+        }}
       />
     </div>
   );

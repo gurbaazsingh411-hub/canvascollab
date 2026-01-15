@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useWorkspaces, useWorkspaceMembers } from "@/hooks/use-workspaces";
 import { useAuth } from "@/hooks/use-auth";
-import { profilesApi } from "@/lib/api";
-import { Loader2, Trash2, UserPlus, X, Save } from "lucide-react";
+import { profilesApi, workspacesApi } from "@/lib/api";
+import { Loader2, Trash2, UserPlus, X, Save, Copy, Link } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function WorkspaceSettingsPage() {
@@ -25,6 +25,8 @@ export default function WorkspaceSettingsPage() {
     const workspace = workspaces?.find((w) => w.id === id);
     const [newName, setNewName] = useState(workspace?.name || "");
     const [inviteEmail, setInviteEmail] = useState("");
+    const [inviteLink, setInviteLink] = useState<string | null>(null);
+    const [isGeneratingLink, setIsGeneratingLink] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
 
     // If workspace not found or still loading
@@ -93,6 +95,34 @@ export default function WorkspaceSettingsPage() {
             toast({ title: "Error", description: "Failed to add member.", variant: "destructive" });
         } finally {
             setIsSearching(false);
+        }
+    };
+
+    const handleGenerateInviteLink = async (role: string = 'member') => {
+        if (!id) return;
+        
+        setIsGeneratingLink(true);
+        try {
+            const invite = await workspacesApi.generateInviteLink(id, role);
+            const inviteAny = invite as any;
+            const inviteUrl = `${window.location.origin}/invite/${inviteAny.invite_token}`;
+            setInviteLink(inviteUrl);
+            toast({ 
+                title: "Invite link generated", 
+                description: "The link has been copied to your clipboard." 
+            });
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(inviteUrl);
+        } catch (error) {
+            console.error(error);
+            toast({ 
+                title: "Error", 
+                description: "Failed to generate invite link.", 
+                variant: "destructive" 
+            });
+        } finally {
+            setIsGeneratingLink(false);
         }
     };
 
@@ -167,6 +197,39 @@ export default function WorkspaceSettingsPage() {
 
                             <Separator />
 
+                            {/* Invite via Link */}
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <Label>Invite via Link</Label>
+                                        <p className="text-xs text-muted-foreground">Share this link with colleagues to join your workspace</p>
+                                    </div>
+                                    <Button 
+                                        onClick={() => handleGenerateInviteLink('member')} 
+                                        disabled={isGeneratingLink}
+                                        size="sm"
+                                    >
+                                        {isGeneratingLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4 mr-2" />}
+                                        {isGeneratingLink ? 'Generating...' : 'Generate Link'}
+                                    </Button>
+                                </div>
+                                
+                                {inviteLink && (
+                                    <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                                        <span className="text-sm truncate">{inviteLink}</span>
+                                        <Button 
+                                            variant="secondary" 
+                                            size="sm" 
+                                            onClick={() => navigator.clipboard.writeText(inviteLink)}
+                                        >
+                                            <Copy className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <Separator />
+                            
                             {/* Members List */}
                             <div className="space-y-4">
                                 {membersLoading ? (

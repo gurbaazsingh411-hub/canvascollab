@@ -8,7 +8,19 @@ export function useTodos() {
 
     const todosQuery = useQuery({
         queryKey: ["todos"],
-        queryFn: todosApi.getAll,
+        queryFn: async () => {
+            try {
+                return await todosApi.getAll();
+            } catch (error) {
+                // Silently handle the error when the todos table doesn't exist
+                // Return an empty array instead of throwing
+                if (error instanceof Error && error.message.includes('Table does not exist')) {
+                    return [];
+                }
+                // Re-throw other errors
+                throw error;
+            }
+        },
         enabled: !!user,
     });
 

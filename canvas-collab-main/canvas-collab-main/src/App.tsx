@@ -10,6 +10,8 @@ import AuthPage from "./pages/AuthPage";
 import DocumentPage from "./pages/DocumentPage";
 import SpreadsheetPage from "./pages/SpreadsheetPage";
 import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
+import WorkspaceAnalyticsPage from "./pages/WorkspaceAnalyticsPage";
+import InvitePage from "./pages/InvitePage";
 import RecentPage from "./pages/RecentPage";
 import StarredPage from "./pages/StarredPage";
 import SharedPage from "./pages/SharedPage";
@@ -35,6 +37,8 @@ const App = () => (
               <Route path="/document/:id" element={<DocumentPage />} />
               <Route path="/spreadsheet/:id" element={<SpreadsheetPage />} />
               <Route path="/workspace/:id/settings" element={<WorkspaceSettingsPage />} />
+              <Route path="/workspace/:id/analytics" element={<WorkspaceAnalyticsPage />} />
+              <Route path="/invite/:token" element={<InvitePage />} />
 
               {/* New Pages */}
               <Route path="/recent" element={<RecentPage />} />

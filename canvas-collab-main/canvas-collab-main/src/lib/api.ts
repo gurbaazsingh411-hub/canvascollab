@@ -31,13 +31,32 @@ export interface Todo {
 
 export const todosApi = {
   async getAll() {
-    const { data, error } = await supabase
-      .from("todos" as any)
-      .select("*")
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("todos" as any)
+        .select("*")
+        .order("created_at", { ascending: false });
 
-    if (error) throw error;
-    return data as Todo[];
+      if (error) {
+        // If the table doesn't exist, return an empty array instead of throwing
+        if (error.code === '42P01' || error.message.toLowerCase().includes('does not exist')) {
+          return [];
+        }
+        throw error;
+      }
+      return data as any as Todo[];
+    } catch (err) {
+      // Catch any other errors that might occur, particularly network errors
+      // If it's a "table does not exist" related error, return empty array
+      if (err instanceof Error && 
+          (err.message.includes('does not exist') || 
+           err.message.includes('404') || 
+           err.message.includes('missing'))) {
+        return [];
+      }
+      // Re-throw other errors
+      throw err;
+    }
   },
 
   async create(content: string) {
@@ -53,8 +72,15 @@ export const todosApi = {
       .select()
       .single();
 
-    if (error) throw error;
-    return data as Todo;
+    if (error) {
+      // If the table doesn't exist, throw a more descriptive error
+      if (error.code === '42P01' || error.message.includes('does not exist')) {
+        console.warn('Todos table does not exist:', error.message);
+        throw new Error('Todos feature is not available: Table does not exist');
+      }
+      throw error;
+    }
+    return data as any as Todo;
   },
 
   async toggle(id: string, completed: boolean) {
@@ -65,8 +91,15 @@ export const todosApi = {
       .select()
       .single();
 
-    if (error) throw error;
-    return data as Todo;
+    if (error) {
+      // If the table doesn't exist, throw a more descriptive error
+      if (error.code === '42P01' || error.message.includes('does not exist')) {
+        console.warn('Todos table does not exist:', error.message);
+        throw new Error('Todos feature is not available: Table does not exist');
+      }
+      throw error;
+    }
+    return data as any as Todo;
   },
 
   async delete(id: string) {
@@ -102,13 +135,58 @@ export const workspacesApi = {
   },
 
   async getMembers(workspaceId: string) {
-    const { data, error } = await supabase
-      .from("workspace_members" as any)
-      .select("*, profile:user_id(display_name, email, avatar_url)")
-      .eq("workspace_id", workspaceId);
+    try {
+      // First, get the workspace members
+      const { data: members, error: membersError } = await supabase
+        .from("workspace_members" as any)
+        .select("*")
+        .eq("workspace_id", workspaceId);
 
-    if (error) throw error;
-    return data;
+      if (membersError) {
+        // If it's a permission error or bad request, return an empty array
+        if (membersError.code === '42501' || membersError.code === '400' || membersError.code === '401' || membersError.code === '403') {
+          console.warn('Permission denied accessing workspace members:', membersError.message);
+          return [];
+        }
+        throw membersError;
+      }
+      
+      // Cast members to any to avoid typing issues
+      const typedMembers: any[] = members as any[];
+      
+      // Then, get the profile information for each member
+      if (typedMembers && typedMembers.length > 0) {
+        const userIds = typedMembers.map(member => member.user_id);
+        
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, display_name, email, avatar_url")
+          .in("id", userIds);
+          
+        if (profilesError) {
+          console.warn('Error fetching member profiles:', profilesError.message);
+          // Return members without profiles
+          return typedMembers.map(member => ({
+            ...member,
+            profile: null
+          }));
+        }
+        
+        // Combine members with their profiles
+        return typedMembers.map(member => {
+          const profile = profiles?.find(p => p.id === member.user_id) || null;
+          return {
+            ...member,
+            profile
+          };
+        });
+      }
+      
+      return [];
+    } catch (err) {
+      console.error('Error fetching workspace members:', err);
+      return [];
+    }
   },
 
   async addMember(workspaceId: string, userId: string, role: string = 'member') {
@@ -151,6 +229,161 @@ export const workspacesApi = {
       .eq("id", id);
 
     if (error) throw error;
+  },
+
+  // Get workspace analytics data
+  async getAnalytics(workspaceId: string) {
+    // Get all members of the workspace
+    const members = await this.getMembers(workspaceId);
+    
+    // Get all documents in the workspace
+    const workspaceDocuments = await documentsApi.getAll(workspaceId);
+    
+    // Get all spreadsheets in the workspace
+    const workspaceSpreadsheets = await spreadsheetsApi.getAll(workspaceId);
+    
+    // Get all todos
+    const allTodos = await todosApi.getAll();
+    
+    // Combine documents and spreadsheets as files
+    const allFiles = [
+      ...workspaceDocuments.map(doc => ({...doc, type: 'document'})),
+      ...workspaceSpreadsheets.map(sheet => ({...sheet, type: 'spreadsheet'}))
+    ];
+    
+    // Organize data by member
+    const membersWithDetails = members.map(member => {
+      const userFiles = allFiles.filter(file => file.owner_id === member.user_id);
+      const userTodos = allTodos.filter((todo: any) => todo.user_id === member.user_id);
+      
+      return {
+        ...member,
+        files: userFiles,
+        todos: userTodos
+      };
+    });
+    
+    return {
+      members: membersWithDetails,
+      totalFiles: allFiles.length,
+      totalTodos: allTodos.length,
+      pendingTodos: allTodos.filter((todo: any) => !todo.completed).length
+    };
+  },
+
+  // Invite functions
+  async generateInviteLink(workspaceId: string, role: string = 'member') {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("No user found");
+    
+    // Generate a random token for the invite link
+    const inviteToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    
+    try {
+      const { data, error } = await supabase
+        .from("workspace_invites" as any)
+        .insert({
+          workspace_id: workspaceId,
+          inviter_id: user.id,
+          role,
+          invite_token: inviteToken,
+        })
+        .select()
+        .single();
+        
+      if (error) {
+        // If the table doesn't exist, throw a more descriptive error
+        if (error.code === '42P01' || error.message.toLowerCase().includes('does not exist')) {
+          console.warn('workspace_invites table does not exist:', error.message);
+          throw new Error('Invite links feature is not available: Table does not exist');
+        }
+        throw error;
+      }
+      return data;
+    } catch (err) {
+      // Handle any other errors that might occur, particularly network errors
+      if (err instanceof Error && 
+          (err.message.includes('does not exist') || 
+           err.message.includes('404') || 
+           err.message.includes('missing'))) {
+        console.warn('workspace_invites table does not exist:', err.message);
+        throw new Error('Invite links feature is not available: Table does not exist');
+      }
+      // Re-throw other errors
+      throw err;
+    }
+  },
+  
+  async useInviteLink(token: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("No user found");
+    
+    try {
+      // Check if the invite token exists and is valid
+      const { data: invite, error } = await supabase
+        .from("workspace_invites" as any)
+        .select("*, workspace:workspace_id(id, name)")
+        .eq("invite_token", token)
+        .eq("used", false)
+        .gte("expires_at", new Date().toISOString())
+        .single();
+        
+      if (error) {
+        if (error.code === 'PGRST116' || error.code === '42P01' || error.message.toLowerCase().includes('does not exist')) {
+          throw new Error("Invalid or expired invite link");
+        }
+        throw error;
+      }
+      
+      if (!invite) {
+        throw new Error("Invalid or expired invite link");
+      }
+      
+      // Check if user is already a member of this workspace
+      const inviteAny = invite as any;
+      const { data: existingMembership } = await supabase
+        .from("workspace_members" as any)
+        .select("id")
+        .eq("workspace_id", inviteAny.workspace_id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+        
+      if (existingMembership) {
+        throw new Error("You are already a member of this workspace");
+      }
+      
+      // Add the user to the workspace
+      const { error: memberError } = await supabase
+        .from("workspace_members" as any)
+        .insert({
+          workspace_id: inviteAny.workspace_id,
+          user_id: user.id,
+          role: inviteAny.role
+        });
+        
+      if (memberError) throw memberError;
+      
+      // Mark the invite as used
+      const { error: updateError } = await supabase
+        .from("workspace_invites" as any)
+        .update({ used: true })
+        .eq("id", inviteAny.id);
+        
+      if (updateError) console.error("Error marking invite as used:", updateError);
+      
+      return invite;
+    } catch (err) {
+      // Handle any other errors that might occur, particularly network errors
+      if (err instanceof Error && 
+          (err.message.includes('does not exist') || 
+           err.message.includes('404') || 
+           err.message.includes('missing'))) {
+        console.warn('workspace_invites table does not exist:', err.message);
+        throw new Error('Invite links feature is not available: Table does not exist');
+      }
+      // Re-throw other errors
+      throw err;
+    }
   }
 };
 

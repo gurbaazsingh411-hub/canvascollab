@@ -98,6 +98,12 @@ export async function exportToDOCX(title: string, editorJSON: any) {
                             );
                         });
                     }
+                } else if (node.type === "horizontalRule") {
+                    // Handle horizontal rules
+                    paragraphs.push(new Paragraph({ text: "────────────────────────────", thematicBreak: true }));
+                } else if (node.type === "pageBreak") {
+                    // Handle page breaks - just add some space
+                    paragraphs.push(new Paragraph({ text: "" }));
                 }
             });
         }

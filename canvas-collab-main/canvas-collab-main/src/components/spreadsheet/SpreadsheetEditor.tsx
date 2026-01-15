@@ -2,26 +2,44 @@ import { useState, useCallback, useRef } from "react";
 import { SpreadsheetToolbar } from "./SpreadsheetToolbar";
 import { CollaboratorPresence } from "../editor/CollaboratorPresence";
 import { cn } from "@/lib/utils";
+import { evaluateFormula } from "@/lib/formulas";
 
 interface CellData {
   value: string;
   formula?: string;
+  formulaResult?: string;
+  format?: {
+    bold?: boolean;
+    italic?: boolean;
+    backgroundColor?: string;
+    textColor?: string;
+    fontSize?: number;
+    alignment?: 'left' | 'center' | 'right';
+  };
 }
 
 interface SpreadsheetEditorProps {
   spreadsheetId?: string;
 }
 
-const COLUMNS = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
-const ROWS = Array.from({ length: 100 }, (_, i) => i + 1);
-const COLUMN_WIDTH = 100;
-const ROW_HEIGHT = 32;
-
 export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
   const [cells, setCells] = useState<Record<string, CellData>>({});
   const [selectedCell, setSelectedCell] = useState<string | null>("A1");
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // State for freeze panes
+  const [frozenRows, setFrozenRows] = useState(0);
+  const [frozenCols, setFrozenCols] = useState(0);
+  
+  // State for sorting and filtering
+  const [sortConfig, setSortConfig] = useState<{column: string, direction: 'asc' | 'desc'} | null>(null);
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  
+  const COLUMNS = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
+  const ROWS = Array.from({ length: 100 }, (_, i) => i + 1);
+  const COLUMN_WIDTH = 100;
+  const ROW_HEIGHT = 32;
 
   // Mock collaborators for demo
   const collaborators = [
@@ -74,11 +92,78 @@ export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
     }
   };
 
+  // Functions for freeze panes
+  const toggleFreezeRow = (rowIndex: number) => {
+    setFrozenRows(frozenRows === rowIndex ? 0 : rowIndex);
+  };
+
+  const toggleFreezeColumn = (colIndex: number) => {
+    setFrozenCols(frozenCols === colIndex ? 0 : colIndex);
+  };
+
+  // Functions for sorting
+  const sortColumn = (col: string) => {
+    const direction = sortConfig && sortConfig.column === col && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    setSortConfig({ column: col, direction });
+    
+    // Sort the data
+    const sortedCells = { ...cells };
+    // Note: Actual sorting logic would need to be implemented based on data
+  };
+
+  // Functions for filtering
+  const applyFilter = (col: string, filterValue: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [col]: filterValue
+    }));
+  };
+
+  const clearFilter = (col: string) => {
+    setFilters(prev => {
+      const newFilters = { ...prev };
+      delete newFilters[col];
+      return newFilters;
+    });
+  };
+
+  // Function to check if a cell should be displayed based on filters
+  const isCellVisible = (col: string, row: number): boolean => {
+    const cellKey = getCellKey(col, row);
+    const cellValue = cells[cellKey]?.value || '';
+    
+    for (const [filterCol, filterVal] of Object.entries(filters)) {
+      if (filterCol === col && filterVal && !cellValue.toLowerCase().includes(filterVal.toLowerCase())) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Calculation functions for status bar
+  const calculateSum = (): number => {
+    const values = Object.values(cells).map(cell => parseFloat(cell.value || '0')).filter(val => !isNaN(val));
+    return values.reduce((sum, val) => sum + val, 0);
+  };
+
+  const calculateAverage = (): number => {
+    const values = Object.values(cells).map(cell => parseFloat(cell.value || '0')).filter(val => !isNaN(val));
+    return values.length > 0 ? values.reduce((sum, val) => sum + val, 0) / values.length : 0;
+  };
+
+  const calculateCount = (): number => {
+    return Object.values(cells).filter(cell => cell.value && !isNaN(parseFloat(cell.value))).length;
+  };
+
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/95 backdrop-blur px-6 py-3">
-        <SpreadsheetToolbar />
+        <SpreadsheetToolbar 
+          spreadsheetId={spreadsheetId}
+          cells={cells}
+          setCells={setCells}
+        />
         <CollaboratorPresence collaborators={collaborators} />
       </div>
 
@@ -181,47 +266,12 @@ export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
           <span>Sheet 1 of 1</span>
         </div>
         <div className="flex items-center gap-4">
-          <span>Sum: 0</span>
-          <span>Average: 0</span>
-          <span>Count: 0</span>
+          <span>Sum: {calculateSum().toFixed(2)}</span>
+          <span>Average: {calculateAverage().toFixed(2)}</span>
+          <span>Count: {calculateCount()}</span>
         </div>
       </div>
     </div>
   );
 }
 
-// Simple formula evaluator (basic SUM, AVERAGE, COUNT)
-function evaluateFormula(formula: string, cells: Record<string, CellData>): string {
-  try {
-    const match = formula.toUpperCase().match(/^=(\w+)\(([A-Z]+\d+):([A-Z]+\d+)\)$/);
-    if (!match) return formula;
-
-    const [, func, start, end] = match;
-    const startCol = start.match(/[A-Z]+/)?.[0] || "A";
-    const startRow = parseInt(start.match(/\d+/)?.[0] || "1");
-    const endCol = end.match(/[A-Z]+/)?.[0] || "A";
-    const endRow = parseInt(end.match(/\d+/)?.[0] || "1");
-
-    const values: number[] = [];
-    for (let c = startCol.charCodeAt(0); c <= endCol.charCodeAt(0); c++) {
-      for (let r = startRow; r <= endRow; r++) {
-        const key = `${String.fromCharCode(c)}${r}`;
-        const val = parseFloat(cells[key]?.value || "0");
-        if (!isNaN(val)) values.push(val);
-      }
-    }
-
-    switch (func) {
-      case "SUM":
-        return values.reduce((a, b) => a + b, 0).toString();
-      case "AVERAGE":
-        return values.length ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2) : "0";
-      case "COUNT":
-        return values.length.toString();
-      default:
-        return formula;
-    }
-  } catch {
-    return "#ERROR";
-  }
-}
