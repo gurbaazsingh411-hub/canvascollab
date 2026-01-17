@@ -6,6 +6,7 @@ import { History, X, RotateCcw, Eye } from "lucide-react";
 import { useDocumentVersions, useRestoreDocumentVersion, type DocumentVersion } from "@/hooks/use-versions";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 interface VersionHistoryProps {
     documentId: string;
@@ -17,6 +18,7 @@ export function VersionHistory({ documentId, isOpen, onClose }: VersionHistoryPr
     const [previewVersion, setPreviewVersion] = useState<DocumentVersion | null>(null);
     const { data: versions, isLoading } = useDocumentVersions(documentId);
     const restoreVersion = useRestoreDocumentVersion();
+    const { addNotification } = useNotifications();
 
     const handleRestore = async (version: DocumentVersion) => {
         try {
@@ -27,10 +29,25 @@ export function VersionHistory({ documentId, isOpen, onClose }: VersionHistoryPr
                 title: version.title,
             });
             toast.success("Version restored successfully");
+            
+            // Add notification for version restoration
+            addNotification({
+                title: "Version Restored",
+                message: `Document restored to version from ${version.title}`,
+                type: "success",
+            });
+            
             onClose();
         } catch (error) {
             console.error("Failed to restore version:", error);
             toast.error("Failed to restore version");
+            
+            // Add notification for failed restoration
+            addNotification({
+                title: "Restore Failed",
+                message: "Failed to restore the document version",
+                type: "error",
+            });
         }
     };
 

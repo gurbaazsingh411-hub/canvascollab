@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Share2, Copy, Check, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 interface ShareDialogProps {
     documentId: string;
@@ -29,6 +30,7 @@ export function ShareDialog({ documentId, documentTitle }: ShareDialogProps) {
     const [email, setEmail] = useState("");
     const [role, setRole] = useState<"viewer" | "editor" | "owner">("viewer");
     const [copied, setCopied] = useState(false);
+    const { addNotification } = useNotifications();
 
     const shareLink = `${window.location.origin}/document/${documentId}`;
 
@@ -36,6 +38,14 @@ export function ShareDialog({ documentId, documentTitle }: ShareDialogProps) {
         navigator.clipboard.writeText(shareLink);
         setCopied(true);
         toast.success("Link copied to clipboard");
+        
+        // Add notification for link copied
+        addNotification({
+            title: "Link Copied",
+            message: `Share link for "${documentTitle}" copied to clipboard`,
+            type: "info",
+        });
+        
         setTimeout(() => setCopied(false), 2000);
     };
 
@@ -47,6 +57,14 @@ export function ShareDialog({ documentId, documentTitle }: ShareDialogProps) {
         // TODO: Implement invite functionality
         console.log("Inviting", email, "as", role);
         toast.success(`Invitation sent to ${email}`);
+        
+        // Add notification for successful invitation
+        addNotification({
+            title: "Document Shared",
+            message: `You've shared "${documentTitle}" with ${email} as ${role}.`,
+            type: "success",
+        });
+        
         setEmail("");
     };
 

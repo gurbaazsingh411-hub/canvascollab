@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/hooks/use-auth";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import DocumentPage from "./pages/DocumentPage";
@@ -27,32 +28,34 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="light" storageKey="collabdocs-theme">
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/document/:id" element={<DocumentPage />} />
-              <Route path="/spreadsheet/:id" element={<SpreadsheetPage />} />
-              <Route path="/workspace/:id/settings" element={<WorkspaceSettingsPage />} />
-              <Route path="/workspace/:id/analytics" element={<WorkspaceAnalyticsPage />} />
-              <Route path="/invite/:token" element={<InvitePage />} />
+        <NotificationProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/document/:id" element={<DocumentPage />} />
+                <Route path="/spreadsheet/:id" element={<SpreadsheetPage />} />
+                <Route path="/workspace/:id/settings" element={<WorkspaceSettingsPage />} />
+                <Route path="/workspace/:id/analytics" element={<WorkspaceAnalyticsPage />} />
+                <Route path="/invite/:token" element={<InvitePage />} />
 
-              {/* New Pages */}
-              <Route path="/recent" element={<RecentPage />} />
-              <Route path="/starred" element={<StarredPage />} />
-              <Route path="/shared" element={<SharedPage />} />
-              <Route path="/trash" element={<TrashPage />} />
-              <Route path="/settings" element={<ProfileSettingsPage />} />
-              <Route path="/workspace/documents" element={<WorkspaceDocumentsPage />} />
-              <Route path="/workspace/spreadsheets" element={<WorkspaceSpreadsheetsPage />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+                {/* New Pages */}
+                <Route path="/recent" element={<RecentPage />} />
+                <Route path="/starred" element={<StarredPage />} />
+                <Route path="/shared" element={<SharedPage />} />
+                <Route path="/trash" element={<TrashPage />} />
+                <Route path="/settings" element={<ProfileSettingsPage />} />
+                <Route path="/workspace/documents" element={<WorkspaceDocumentsPage />} />
+                <Route path="/workspace/spreadsheets" element={<WorkspaceSpreadsheetsPage />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>

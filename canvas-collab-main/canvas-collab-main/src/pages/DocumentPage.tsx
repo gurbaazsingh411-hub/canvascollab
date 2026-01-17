@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { exportToPDF, exportToDOCX } from "@/lib/export";
 import { toast } from "sonner";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 export default function DocumentPage() {
   const { id } = useParams();
@@ -22,6 +23,7 @@ export default function DocumentPage() {
   const [isCommentSidebarOpen, setIsCommentSidebarOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
+  const { addNotification } = useNotifications();
 
   const handleExport = async (format: 'pdf' | 'docx') => {
     setIsExporting(true);

@@ -5,11 +5,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, Upload, FileSpreadsheet } from "lucide-react";
+import { Download, Upload, FileSpreadsheet, Printer, ChevronDown } from "lucide-react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { saveAs } from "file-saver";
 import { evaluateFormula } from "@/lib/formulas";
+import { exportSpreadsheetToPDF } from "@/lib/printing";
+import { useToast } from "@/hooks/use-toast";
 
 interface SpreadsheetToolbarProps {
   spreadsheetId?: string;
@@ -20,6 +22,54 @@ interface SpreadsheetToolbarProps {
 }
 
 export function SpreadsheetToolbar({ spreadsheetId, onImport, onExport, cells, setCells }: SpreadsheetToolbarProps) {
+  const { toast } = useToast();
+
+  const handleExportPDF = async () => {
+    try {
+      // Prepare spreadsheet data for export
+      const data: string[][] = [];
+      
+      // Create header row
+      const headerRow: string[] = [""];
+      for (let i = 0; i < 26; i++) { // A-Z columns
+        headerRow.push(String.fromCharCode(65 + i));
+      }
+      data.push(headerRow);
+      
+      // Add data rows
+      for (let row = 1; row <= 100; row++) {
+        const rowData: string[] = [row.toString()]; // Row number in first column
+        for (let i = 0; i < 26; i++) {
+          const col = String.fromCharCode(65 + i);
+          const cellKey = `${col}${row}`;
+          const cellData = cells[cellKey];
+          // Use calculated value if it's a formula, otherwise use the raw value
+          let cellValue = "";
+          if (cellData?.formula) {
+            // Calculate formula result for export
+            const formulaResult = evaluateFormula(cellData.formula, cells);
+            cellValue = formulaResult;
+          } else {
+            cellValue = cellData?.value || "";
+          }
+          rowData.push(cellValue);
+        }
+        data.push(rowData);
+      }
+      
+      await exportSpreadsheetToPDF(data, "spreadsheet.pdf");
+      toast({
+        title: "Export Successful",
+        description: "Spreadsheet exported as PDF",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export spreadsheet to PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleImportCSV = () => {
     const input = document.createElement("input");
@@ -178,6 +228,10 @@ export function SpreadsheetToolbar({ spreadsheetId, onImport, onExport, cells, s
           <DropdownMenuItem onClick={handleExportXLSX}>
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Export as XLSX
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportPDF}>
+            <Download className="h-4 w-4 mr-2" />
+            Export as PDF
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

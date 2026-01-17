@@ -15,6 +15,9 @@ import {
   Minus,
   Link2,
   SquareSplitVertical,
+  Download,
+  Printer,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -23,6 +26,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { exportToDOCX } from "@/lib/export";
+import { printDocument, exportToPDF } from "@/lib/printing";
+import { useToast } from "@/hooks/use-toast";
 
 interface ToolbarButtonProps {
   icon: React.ElementType;
@@ -57,17 +70,89 @@ function ToolbarButton({ icon: Icon, label, active, onClick, disabled }: Toolbar
 
 interface DocumentToolbarProps {
   editor: Editor | null;
+  fileName?: string;
 }
 
-export function DocumentToolbar({ editor }: DocumentToolbarProps) {
+export function DocumentToolbar({ editor, fileName = "document" }: DocumentToolbarProps) {
   if (!editor) {
     return null;
   }
+
+  const { toast } = useToast();
 
   const setLink = () => {
     const url = window.prompt("Enter URL:");
     if (url) {
       editor.chain().focus().setLink({ href: url }).run();
+    }
+  };
+
+  const handleExportDocx = async () => {
+    try {
+      await exportToDOCX(editor.getHTML(), fileName);
+      toast({
+        title: "Export Successful",
+        description: `Document exported as ${fileName}.docx`,
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export document. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportPdf = async () => {
+    try {
+      // We need to get the editor content and export it to PDF
+      const editorContent = document.querySelector('.tiptap');
+      if (editorContent) {
+        await exportToPDF('tiptap', `${fileName}.pdf`);
+        toast({
+          title: "Export Successful",
+          description: `Document exported as ${fileName}.pdf`,
+        });
+      } else {
+        // Fallback to editor.getHTML() if element not found
+        await exportToDOCX(editor.getHTML(), fileName);
+        toast({
+          title: "Export Successful",
+          description: `Document exported as ${fileName}.pdf`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export document. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePrint = async () => {
+    try {
+      // Get the editor content and print it
+      const editorContent = document.querySelector('.tiptap');
+      if (editorContent) {
+        printDocument('tiptap', fileName);
+        toast({
+          title: "Print Initiated",
+          description: "Document print window opened",
+        });
+      } else {
+        toast({
+          title: "Print Failed",
+          description: "Could not find document content to print",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Print Failed",
+        description: "Failed to print document. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -181,6 +266,33 @@ export function DocumentToolbar({ editor }: DocumentToolbarProps) {
           editor.chain().focus().setPageBreak().run();
         }}
       />
+
+      <Separator orientation="vertical" className="mx-1 h-6" />
+
+      {/* Export/Print */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="p-2">
+            <Download className="h-4 w-4 mr-2" />
+            Export
+            <ChevronDown className="h-4 w-4 ml-1" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onClick={handleExportDocx}>
+            <Download className="h-4 w-4 mr-2" />
+            Export as DOCX
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportPdf}>
+            <Download className="h-4 w-4 mr-2" />
+            Export as PDF
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handlePrint}>
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

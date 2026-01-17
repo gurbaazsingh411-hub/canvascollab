@@ -1,4 +1,4 @@
-import { Bell, Moon, Sun, User, LogOut } from "lucide-react";
+import { Moon, Sun, User, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,9 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/hooks/use-auth";
+import { NotificationBadge } from "@/components/ui/notification-badge";
+import { useState } from "react";
+import { NotificationPanel } from "@/components/ui/notification-panel";
 
 interface TopBarProps {
   title?: string;
@@ -21,6 +24,7 @@ export function TopBar({ title }: TopBarProps) {
   const { theme, setTheme } = useTheme();
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "User";
   const initials = displayName.slice(0, 2).toUpperCase();
@@ -54,13 +58,7 @@ export function TopBar({ title }: TopBarProps) {
         </Button>
 
         {/* Notifications */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground hover:text-foreground relative"
-        >
-          <Bell className="h-5 w-5" />
-        </Button>
+        <NotificationBadge onClick={() => setShowNotifications(true)} />
 
         {/* User Menu */}
         <DropdownMenu>
@@ -95,6 +93,10 @@ export function TopBar({ title }: TopBarProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <NotificationPanel 
+        isOpen={showNotifications} 
+        onClose={() => setShowNotifications(false)} 
+      />
     </header>
   );
 }

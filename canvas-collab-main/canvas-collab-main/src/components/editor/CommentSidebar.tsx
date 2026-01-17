@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useComments, useCreateComment, useResolveComment, useCreateReply } from "@/hooks/use-comments";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 interface CommentSidebarProps {
     documentId: string;
@@ -20,6 +21,7 @@ export function CommentSidebar({ documentId, isOpen, onClose }: CommentSidebarPr
     const [newComment, setNewComment] = useState("");
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [replyContent, setReplyContent] = useState("");
+    const { addNotification } = useNotifications();
 
     const { data: comments, isLoading } = useComments(documentId);
     const createComment = useCreateComment();
@@ -36,9 +38,23 @@ export function CommentSidebar({ documentId, isOpen, onClose }: CommentSidebarPr
             });
             setNewComment("");
             toast.success("Comment added");
+            
+            // Add notification for new comment
+            addNotification({
+                title: "Comment Added",
+                message: "Your comment has been added successfully",
+                type: "success",
+            });
         } catch (error) {
             toast.error("Failed to add comment");
             console.error(error);
+            
+            // Add notification for failed comment
+            addNotification({
+                title: "Comment Failed",
+                message: "Failed to add your comment",
+                type: "error",
+            });
         }
     };
 
@@ -54,9 +70,23 @@ export function CommentSidebar({ documentId, isOpen, onClose }: CommentSidebarPr
             setReplyContent("");
             setReplyingTo(null);
             toast.success("Reply added");
+            
+            // Add notification for new reply
+            addNotification({
+                title: "Reply Added",
+                message: "Your reply has been added successfully",
+                type: "success",
+            });
         } catch (error) {
             toast.error("Failed to add reply");
             console.error(error);
+            
+            // Add notification for failed reply
+            addNotification({
+                title: "Reply Failed",
+                message: "Failed to add your reply",
+                type: "error",
+            });
         }
     };
 
@@ -68,9 +98,23 @@ export function CommentSidebar({ documentId, isOpen, onClose }: CommentSidebarPr
                 documentId,
             });
             toast.success(currentResolved ? "Comment reopened" : "Comment resolved");
+            
+            // Add notification for comment resolution
+            addNotification({
+                title: currentResolved ? "Comment Reopened" : "Comment Resolved",
+                message: currentResolved ? "The comment has been reopened" : "The comment has been marked as resolved",
+                type: "info",
+            });
         } catch (error) {
             toast.error("Failed to update comment");
             console.error(error);
+            
+            // Add notification for failed resolution
+            addNotification({
+                title: "Update Failed",
+                message: "Failed to update the comment status",
+                type: "error",
+            });
         }
     };
 

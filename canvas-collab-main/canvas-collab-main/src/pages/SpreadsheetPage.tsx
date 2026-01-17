@@ -14,17 +14,27 @@ import { SpreadsheetToolbar } from "@/components/spreadsheet/SpreadsheetToolbar"
 import { ShareDialog } from "@/components/editor/ShareDialog";
 import { CommentSidebar } from "@/components/editor/CommentSidebar";
 import { VersionHistory } from "@/components/editor/VersionHistory";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 export default function SpreadsheetPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [isCommentSidebarOpen, setIsCommentSidebarOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
+  const [cells, setCells] = useState<Record<string, any>>({});
+  const { addNotification } = useNotifications();
 
   // Placeholder for import handler - to be connected to grid
   const handleImport = (data: any[][]) => {
     console.log("Imported data:", data);
     // TODO: Pass data to grid component to update cells
+    
+    // Add notification for import
+    addNotification({
+      title: "Import Successful",
+      message: `Data imported into spreadsheet successfully`,
+      type: "success",
+    });
   };
 
   return (
@@ -95,7 +105,7 @@ export default function SpreadsheetPage() {
       </div>
 
       {/* Toolbar */}
-      <SpreadsheetToolbar spreadsheetId={id || ""} onImport={handleImport} />
+      <SpreadsheetToolbar spreadsheetId={id || ""} onImport={handleImport} cells={cells} setCells={setCells} />
 
       {/* Grid */}
       <div className="flex-1 overflow-hidden relative">
