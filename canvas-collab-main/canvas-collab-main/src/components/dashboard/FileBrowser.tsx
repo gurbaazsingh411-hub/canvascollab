@@ -4,7 +4,8 @@ import { FileText, Table2, LayoutGrid, List, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FileCard } from "@/components/dashboard/FileCard";
-import { useToggleStar } from "@/hooks/use-files";
+import { useToggleStar, useDeleteDocument, useDeleteSpreadsheet } from "@/hooks/use-files";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 interface FileBrowserProps {
     title: string;
@@ -17,6 +18,9 @@ interface FileBrowserProps {
 export function FileBrowser({ title, files, isLoading, emptyMessage = "No files found." }: FileBrowserProps) {
     const navigate = useNavigate();
     const toggleStar = useToggleStar();
+    const deleteDocument = useDeleteDocument();
+    const deleteSpreadsheet = useDeleteSpreadsheet();
+    const { addNotification } = useNotifications();
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
     const handleFileClick = (file: any) => {
@@ -24,6 +28,30 @@ export function FileBrowser({ title, files, isLoading, emptyMessage = "No files 
             navigate(`/document/${file.id}`);
         } else {
             navigate(`/spreadsheet/${file.id}`);
+        }
+    };
+
+    const handleDeleteFile = async (id: string, type: "document" | "spreadsheet", title: string) => {
+        if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
+
+        try {
+            if (type === "document") {
+                await deleteDocument.mutateAsync(id);
+            } else {
+                await deleteSpreadsheet.mutateAsync(id);
+            }
+
+            addNotification({
+                title: "File Deleted",
+                message: `"${title}" has been moved to trash.`,
+                type: "success",
+            });
+        } catch (error) {
+            addNotification({
+                title: "Deletion Failed",
+                message: "An error occurred while deleting the file.",
+                type: "error",
+            });
         }
     };
 
@@ -80,6 +108,7 @@ export function FileBrowser({ title, files, isLoading, emptyMessage = "No files 
                                     }}
                                     onClick={() => handleFileClick(file)}
                                     onToggleStar={() => toggleStar.mutate({ id: file.id, type: file.type, starred: !file.starred })}
+                                    onDelete={() => handleDeleteFile(file.id, file.type, file.title)}
                                 />
                             ))}
                         </div>

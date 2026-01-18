@@ -407,6 +407,7 @@ export default function Index() {
                       }}
                       onClick={() => handleFileClick(file)}
                       onToggleStar={() => toggleStar.mutate({ id: file.id, type: file.type, starred: !file.starred })}
+                      onDelete={() => handleDeleteFile(file.id, file.type, file.title)}
                     />
                   ))}
                 </div>
@@ -456,6 +457,7 @@ export default function Index() {
                   }}
                   onClick={() => handleFileClick(file)}
                   onToggleStar={() => toggleStar.mutate({ id: file.id, type: file.type, starred: !file.starred })}
+                  onDelete={() => handleDeleteFile(file.id, file.type, file.title)}
                 />
               ))}
             </div>

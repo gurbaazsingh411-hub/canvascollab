@@ -2,16 +2,19 @@ import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, FileText, Table2, Clock } from "lucide-react";
-import { useSearchFiles } from "@/hooks/use-files";
-import { FileCard } from "@/components/dashboard/FileCard";
 import { useNavigate } from "react-router-dom";
-import { useToggleStar } from "@/hooks/use-files";
+import { useSearchFiles, useToggleStar, useDeleteDocument, useDeleteSpreadsheet } from "@/hooks/use-files";
+import { useNotifications } from "@/contexts/NotificationContext";
+import { FileCard } from "@/components/dashboard/FileCard";
 
 export default function SearchPage() {
     const [query, setQuery] = useState("");
     const [debouncedQuery, setDebouncedQuery] = useState("");
     const navigate = useNavigate();
     const toggleStar = useToggleStar();
+    const deleteDocument = useDeleteDocument();
+    const deleteSpreadsheet = useDeleteSpreadsheet();
+    const { addNotification } = useNotifications();
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -27,6 +30,30 @@ export default function SearchPage() {
             navigate(`/document/${file.id}`);
         } else {
             navigate(`/spreadsheet/${file.id}`);
+        }
+    };
+
+    const handleDeleteFile = async (id: string, type: "document" | "spreadsheet", title: string) => {
+        if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
+
+        try {
+            if (type === "document") {
+                await deleteDocument.mutateAsync(id);
+            } else {
+                await deleteSpreadsheet.mutateAsync(id);
+            }
+
+            addNotification({
+                title: "File Deleted",
+                message: `"${title}" has been moved to trash.`,
+                type: "success",
+            });
+        } catch (error) {
+            addNotification({
+                title: "Deletion Failed",
+                message: "An error occurred while deleting the file.",
+                type: "error",
+            });
         }
     };
 
@@ -71,6 +98,7 @@ export default function SearchPage() {
                                     }}
                                     onClick={() => handleFileClick(file)}
                                     onToggleStar={() => toggleStar.mutate({ id: file.id, type: file.type, starred: !file.starred })}
+                                    onDelete={() => handleDeleteFile(file.id, file.type, file.title)}
                                 />
                             ))}
                         </div>
