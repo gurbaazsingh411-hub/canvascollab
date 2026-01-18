@@ -23,7 +23,7 @@ export default function AuthPage() {
   // Redirect if already logged in
   if (user) {
     const params = new URLSearchParams(window.location.search);
-    const redirect = params.get("redirect") || "/";
+    const redirect = params.get("redirect") || "/workspaces";
     navigate(redirect);
     return null;
   }
@@ -49,7 +49,7 @@ export default function AuthPage() {
     }
 
     const params = new URLSearchParams(window.location.search);
-    const redirect = params.get("redirect") || "/";
+    const redirect = params.get("redirect") || "/workspaces";
 
     const { error } = await signIn(email, password);
 

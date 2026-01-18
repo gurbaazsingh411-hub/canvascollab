@@ -20,6 +20,7 @@ import TrashPage from "./pages/TrashPage";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import WorkspaceDocumentsPage from "./pages/WorkspaceDocumentsPage";
 import WorkspaceSpreadsheetsPage from "./pages/WorkspaceSpreadsheetsPage";
+import WorkspaceSelectionPage from "./pages/WorkspaceSelectionPage";
 import SearchPage from "./pages/SearchPage";
 import NotFound from "./pages/NotFound";
 
@@ -42,6 +43,7 @@ const App = () => (
                 <Route path="/workspace/:id/settings" element={<WorkspaceSettingsPage />} />
                 <Route path="/workspace/:id/analytics" element={<WorkspaceAnalyticsPage />} />
                 <Route path="/invite/:token" element={<InvitePage />} />
+                <Route path="/workspaces" element={<WorkspaceSelectionPage />} />
 
                 {/* New Pages */}
                 <Route path="/recent" element={<RecentPage />} />

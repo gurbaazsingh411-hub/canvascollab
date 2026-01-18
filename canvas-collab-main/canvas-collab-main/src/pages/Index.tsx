@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { FileCard } from "@/components/dashboard/FileCard";
@@ -25,7 +25,9 @@ export default function Index() {
   const { addNotification } = useNotifications();
 
   // Workspace State
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(() => {
+    return localStorage.getItem("last_workspace_id");
+  });
   const { workspaces, createWorkspace } = useWorkspaces();
   const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
@@ -38,27 +40,22 @@ export default function Index() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filter, setFilter] = useState<"all" | "documents" | "spreadsheets">("all");
 
-  // New Workspace Flow State
   const [createdWorkspace, setCreatedWorkspace] = useState<any>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
-  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
 
   const handleCreateWorkspace = async () => {
     if (!newWorkspaceName.trim() || !user) return;
     try {
       const ws = await createWorkspace.mutateAsync({ name: newWorkspaceName, ownerId: user.id }) as any;
       setCreatedWorkspace(ws);
-      setIsGeneratingInvite(true);
 
-      // Generate invite link automatically
       const invite = await workspacesApi.generateInviteLink(ws.id);
       const url = `${window.location.origin}/invite/${(invite as any).invite_token}`;
       setInviteLink(url);
-      setIsGeneratingInvite(false);
 
       addNotification({
         title: "Workspace Created",
-        message: `"${ws.name}" is ready. Invite your team!`,
+        message: `"${ws.name}" is ready.`,
         type: "success"
       });
     } catch (error) {
@@ -66,90 +63,21 @@ export default function Index() {
     }
   };
 
-  const handleDone = () => {
+  const handleDoneCreation = () => {
     setIsCreateWorkspaceOpen(false);
     setCreatedWorkspace(null);
     setInviteLink(null);
     setNewWorkspaceName("");
   };
 
-  // Onboarding View (Empty State)
-  if (!isLoading && workspaces && workspaces.length === 0) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
-        <div className="max-w-md w-full text-center space-y-8 animate-fade-in">
-          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10 mx-auto">
-            <Building className="h-10 w-10 text-primary" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold">Welcome to CollabDocs</h1>
-            <p className="text-muted-foreground text-lg">
-              Every great project starts with a workspace. Create your first one to get started.
-            </p>
-          </div>
-
-          <Dialog open={isCreateWorkspaceOpen} onOpenChange={(open) => {
-            setIsCreateWorkspaceOpen(open);
-            if (!open) handleDone();
-          }}>
-            <DialogTrigger asChild>
-              <Button size="lg" className="w-full h-14 text-lg">
-                <Plus className="mr-2 h-5 w-5" /> Add Workspace
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Create New Workspace</DialogTitle>
-              </DialogHeader>
-              <div className="py-4 space-y-4">
-                {!createdWorkspace ? (
-                  <div className="space-y-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="name">Workspace Name</Label>
-                      <Input
-                        id="name"
-                        placeholder="e.g. Acme Team, Marketing, Personal"
-                        value={newWorkspaceName}
-                        onChange={(e) => setNewWorkspaceName(e.target.value)}
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                    <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 text-center">
-                      <p className="font-semibold text-primary">Workspace Created!</p>
-                      <p className="text-sm text-muted-foreground">Share this link with your team to invite them.</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Invite Link</Label>
-                      <div className="flex gap-2">
-                        <Input value={inviteLink || "Generating..."} readOnly className="bg-muted" />
-                        <Button variant="secondary" onClick={() => inviteLink && navigator.clipboard.writeText(inviteLink)}>
-                          Copy
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                {!createdWorkspace ? (
-                  <Button onClick={handleCreateWorkspace} disabled={!newWorkspaceName.trim() || createWorkspace.isPending}>
-                    {createWorkspace.isPending ? "Creating..." : "Create Workspace"}
-                  </Button>
-                ) : (
-                  <Button onClick={handleDone} className="w-full">
-                    Done
-                  </Button>
-                )}
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-    );
-  }
+  // Redirection Logic
+  useEffect(() => {
+    if (!authLoading && user && !selectedWorkspaceId && workspaces && workspaces.length > 0) {
+      navigate("/workspaces");
+    } else if (!authLoading && user && workspaces && workspaces.length === 0) {
+      navigate("/workspaces");
+    }
+  }, [user, authLoading, selectedWorkspaceId, workspaces, navigate]);
 
   // Show auth prompt if not logged in
   if (!authLoading && !user) {
@@ -245,7 +173,12 @@ export default function Index() {
           <div className="flex items-center gap-2">
             <Select
               value={selectedWorkspaceId || "personal"}
-              onValueChange={(val) => setSelectedWorkspaceId(val === "personal" ? null : val)}
+              onValueChange={(val) => {
+                const newId = val === "personal" ? null : val;
+                setSelectedWorkspaceId(newId);
+                if (newId) localStorage.setItem("last_workspace_id", newId);
+                else localStorage.removeItem("last_workspace_id");
+              }}
             >
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Select Workspace" />
@@ -273,7 +206,10 @@ export default function Index() {
               </>
             )}
 
-            <Dialog open={isCreateWorkspaceOpen} onOpenChange={setIsCreateWorkspaceOpen}>
+            <Dialog open={isCreateWorkspaceOpen} onOpenChange={(open) => {
+              setIsCreateWorkspaceOpen(open);
+              if (!open) handleDoneCreation();
+            }}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="icon">
                   <Plus className="h-4 w-4" />
@@ -283,16 +219,50 @@ export default function Index() {
                 <DialogHeader>
                   <DialogTitle>Create New Workspace</DialogTitle>
                 </DialogHeader>
-                <div className="py-4">
-                  <Label>Workspace Name</Label>
-                  <Input
-                    value={newWorkspaceName}
-                    onChange={(e) => setNewWorkspaceName(e.target.value)}
-                    placeholder="e.g. Marketing Team"
-                  />
+                <div className="py-4 space-y-4">
+                  {!createdWorkspace ? (
+                    <div className="space-y-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="name">Workspace Name</Label>
+                        <Input
+                          id="name"
+                          placeholder="e.g. Acme Team"
+                          value={newWorkspaceName}
+                          onChange={(e) => setNewWorkspaceName(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                      <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 text-center">
+                        <p className="font-semibold text-primary">Workspace Created!</p>
+                        <p className="text-sm text-muted-foreground">Share this link to invite team members.</p>
+                      </div>
+                      {inviteLink && (
+                        <div className="space-y-2">
+                          <Label>Invite Link</Label>
+                          <div className="flex gap-2">
+                            <Input value={inviteLink} readOnly className="bg-muted" />
+                            <Button variant="secondary" onClick={() => navigator.clipboard.writeText(inviteLink)}>
+                              Copy
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
-                  <Button onClick={handleCreateWorkspace}>Create Workspace</Button>
+                  {!createdWorkspace ? (
+                    <Button onClick={handleCreateWorkspace} disabled={!newWorkspaceName.trim() || createWorkspace.isPending}>
+                      {createWorkspace.isPending ? "Creating..." : "Create Workspace"}
+                    </Button>
+                  ) : (
+                    <Button onClick={handleDoneCreation} className="w-full">
+                      Done
+                    </Button>
+                  )}
                 </DialogFooter>
               </DialogContent>
             </Dialog>
