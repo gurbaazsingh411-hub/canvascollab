@@ -116,7 +116,7 @@ export const workspacesApi = {
   async getAll() {
     const { data, error } = await supabase
       .from("workspaces" as any)
-      .select("*, owner:profiles!owner_id(display_name, avatar_url)")
+      .select("*, owner:profiles(display_name, avatar_url)")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
