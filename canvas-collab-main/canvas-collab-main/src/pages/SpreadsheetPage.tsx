@@ -16,7 +16,9 @@ import { CommentSidebar } from "@/components/editor/CommentSidebar";
 import { VersionHistory } from "@/components/editor/VersionHistory";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useHeartbeat } from "@/hooks/use-heartbeat";
-import { useSpreadsheet } from "@/hooks/use-files";
+import { useSpreadsheet, useSpreadsheetCells } from "@/hooks/use-files";
+import { useCreateSpreadsheetVersion } from "@/hooks/use-versions";
+import { toast } from "sonner";
 
 export default function SpreadsheetPage() {
   const { id } = useParams();
@@ -26,9 +28,34 @@ export default function SpreadsheetPage() {
   const [cells, setCells] = useState<Record<string, any>>({});
   const { addNotification } = useNotifications();
   const { data: sheet } = useSpreadsheet(id);
+  const { data: spreadsheetCells } = useSpreadsheetCells(id);
+  const createVersion = useCreateSpreadsheetVersion();
 
   // Track activity
   useHeartbeat(sheet?.workspace_id, id, "spreadsheet");
+
+  const handleSaveVersion = async () => {
+    if (!sheet || !id || id === "new" || !spreadsheetCells) return;
+
+    try {
+      const versionCells = spreadsheetCells.map((cell: any) => ({
+        row: cell.row_index,
+        col: cell.col_index,
+        value: cell.value,
+        formula: cell.formula,
+      }));
+
+      await createVersion.mutateAsync({
+        spreadsheet_id: id,
+        cells: versionCells,
+        title: sheet.title || "Untitled Version",
+      });
+      toast.success("Version saved successfully");
+    } catch (error) {
+      console.error("Failed to save version:", error);
+      toast.error("Failed to save version");
+    }
+  };
 
   // Placeholder for import handler - to be connected to grid
   const handleImport = (data: any[][]) => {
@@ -94,6 +121,11 @@ export default function SpreadsheetPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleSaveVersion}>
+                <History className="h-4 w-4 mr-2" />
+                Save Version
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsVersionHistoryOpen(true)}>
                 <History className="h-4 w-4 mr-2" />
                 Version History
@@ -127,6 +159,7 @@ export default function SpreadsheetPage() {
         documentId={id || ""}
         isOpen={isVersionHistoryOpen}
         onClose={() => setIsVersionHistoryOpen(false)}
+        fileType="spreadsheet"
       />
     </div>
   );

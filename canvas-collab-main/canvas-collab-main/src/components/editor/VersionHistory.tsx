@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { History, X, RotateCcw, Eye } from "lucide-react";
-import { useDocumentVersions, useRestoreDocumentVersion, type DocumentVersion } from "@/hooks/use-versions";
+import { useDocumentVersions, useRestoreDocumentVersion, useSpreadsheetVersions, useRestoreSpreadsheetVersion, type DocumentVersion, type SpreadsheetVersion } from "@/hooks/use-versions";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useNotifications } from "@/contexts/NotificationContext";
@@ -12,40 +12,62 @@ interface VersionHistoryProps {
     documentId: string;
     isOpen: boolean;
     onClose: () => void;
+    fileType: "document" | "spreadsheet";
 }
 
-export function VersionHistory({ documentId, isOpen, onClose }: VersionHistoryProps) {
-    const [previewVersion, setPreviewVersion] = useState<DocumentVersion | null>(null);
-    const { data: versions, isLoading } = useDocumentVersions(documentId);
-    const restoreVersion = useRestoreDocumentVersion();
+export function VersionHistory({ documentId, isOpen, onClose, fileType }: VersionHistoryProps) {
+    const [previewVersion, setPreviewVersion] = useState<DocumentVersion | SpreadsheetVersion | null>(null);
+
+    // Hooks for documents
+    const { data: docVersions, isLoading: isLoadingDoc } = useDocumentVersions(fileType === "document" ? documentId : undefined);
+    const restoreDocVersion = useRestoreDocumentVersion();
+
+    // Hooks for spreadsheets
+    const { data: sheetVersions, isLoading: isLoadingSheet } = useSpreadsheetVersions(fileType === "spreadsheet" ? documentId : undefined);
+    const restoreSheetVersion = useRestoreSpreadsheetVersion();
+
+    const versions = fileType === "document" ? docVersions : sheetVersions;
+    const isLoading = fileType === "document" ? isLoadingDoc : isLoadingSheet;
+    const isRestoring = fileType === "document" ? restoreDocVersion.isPending : restoreSheetVersion.isPending;
+
     const { addNotification } = useNotifications();
 
-    const handleRestore = async (version: DocumentVersion) => {
+    const handleRestore = async (version: any) => {
         try {
-            await restoreVersion.mutateAsync({
-                documentId,
-                versionId: version.id,
-                content: version.content,
-                title: version.title,
-            });
+            if (fileType === "document") {
+                await restoreDocVersion.mutateAsync({
+                    documentId,
+                    versionId: version.id,
+                    content: version.content,
+                    title: version.title,
+                });
+            } else {
+                await restoreSheetVersion.mutateAsync({
+                    spreadsheetId: documentId,
+                    versionId: version.id,
+                    cells: version.cells,
+                    title: version.title,
+                });
+            }
+
             toast.success("Version restored successfully");
-            
+
             // Add notification for version restoration
             addNotification({
                 title: "Version Restored",
-                message: `Document restored to version from ${version.title}`,
+                message: `${fileType === "document" ? "Document" : "Spreadsheet"} restored to version from ${version.title}`,
                 type: "success",
             });
-            
+
             onClose();
         } catch (error) {
             console.error("Failed to restore version:", error);
             toast.error("Failed to restore version");
-            
+
             // Add notification for failed restoration
             addNotification({
                 title: "Restore Failed",
-                message: "Failed to restore the document version",
+                message: `Failed to restore the ${fileType} version`,
                 type: "error",
             });
         }
@@ -117,7 +139,7 @@ export function VersionHistory({ documentId, isOpen, onClose }: VersionHistoryPr
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleRestore(version)}
-                                                disabled={restoreVersion.isPending}
+                                                disabled={isRestoring}
                                             >
                                                 <RotateCcw className="h-4 w-4 mr-2" />
                                                 Restore
@@ -131,7 +153,7 @@ export function VersionHistory({ documentId, isOpen, onClose }: VersionHistoryPr
                                 <History className="h-12 w-12 text-muted-foreground/50 mb-2" />
                                 <p className="text-sm text-muted-foreground">No version history yet</p>
                                 <p className="text-xs text-muted-foreground">
-                                    Versions are automatically saved when you edit the document
+                                    Versions are automatically saved when you edit the {fileType}
                                 </p>
                             </div>
                         )}
@@ -148,7 +170,15 @@ export function VersionHistory({ documentId, isOpen, onClose }: VersionHistoryPr
                         </DialogHeader>
                         <ScrollArea className="h-[500px]">
                             <div className="prose prose-lg dark:prose-invert max-w-none p-6">
-                                <div dangerouslySetInnerHTML={{ __html: JSON.stringify(previewVersion.content, null, 2) }} />
+                                <pre className="text-xs whitespace-pre-wrap">
+                                    {JSON.stringify(
+                                        fileType === "document"
+                                            ? (previewVersion as DocumentVersion).content
+                                            : (previewVersion as SpreadsheetVersion).cells,
+                                        null,
+                                        2
+                                    )}
+                                </pre>
                             </div>
                         </ScrollArea>
                         <div className="flex justify-end gap-2 pt-4">

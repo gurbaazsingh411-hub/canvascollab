@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useHeartbeat } from "@/hooks/use-heartbeat";
 import { useDocument } from "@/hooks/use-files";
+import { useCreateDocumentVersion } from "@/hooks/use-versions";
 
 export default function DocumentPage() {
   const { id } = useParams();
@@ -27,9 +28,26 @@ export default function DocumentPage() {
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const { addNotification } = useNotifications();
   const { data: doc } = useDocument(id);
+  const createVersion = useCreateDocumentVersion();
 
   // Track activity
   useHeartbeat(doc?.workspace_id, id, "document");
+
+  const handleSaveVersion = async () => {
+    if (!doc || !id || id === "new") return;
+
+    try {
+      await createVersion.mutateAsync({
+        document_id: id,
+        content: doc.content,
+        title: doc.title || "Untitled Version",
+      });
+      toast.success("Version saved successfully");
+    } catch (error) {
+      console.error("Failed to save version:", error);
+      toast.error("Failed to save version");
+    }
+  };
 
   const handleExport = async (format: 'pdf' | 'docx') => {
     setIsExporting(true);
@@ -123,6 +141,11 @@ export default function DocumentPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleSaveVersion}>
+                <History className="h-4 w-4 mr-2" />
+                Save Version
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsVersionHistoryOpen(true)}>
                 <History className="h-4 w-4 mr-2" />
                 Version History
@@ -153,6 +176,7 @@ export default function DocumentPage() {
         documentId={id || ""}
         isOpen={isVersionHistoryOpen}
         onClose={() => setIsVersionHistoryOpen(false)}
+        fileType="document"
       />
     </div>
   );
