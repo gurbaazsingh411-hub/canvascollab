@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
-import { useFiles, useCreateDocument, useCreateSpreadsheet, useToggleStar } from "@/hooks/use-files";
+import { useFiles, useCreateDocument, useCreateSpreadsheet, useToggleStar, useDeleteDocument, useDeleteSpreadsheet } from "@/hooks/use-files";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { TodoList } from "@/components/dashboard/TodoList";
 import { useNotifications } from "@/contexts/NotificationContext";
@@ -36,6 +36,8 @@ export default function Index() {
   const createDocument = useCreateDocument();
   const createSpreadsheet = useCreateSpreadsheet();
   const toggleStar = useToggleStar();
+  const deleteDocument = useDeleteDocument();
+  const deleteSpreadsheet = useDeleteSpreadsheet();
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filter, setFilter] = useState<"all" | "documents" | "spreadsheets">("all");
@@ -126,6 +128,30 @@ export default function Index() {
       navigate(`/document/${file.id}`);
     } else {
       navigate(`/spreadsheet/${file.id}`);
+    }
+  };
+
+  const handleDeleteFile = async (id: string, type: "document" | "spreadsheet", title: string) => {
+    if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
+
+    try {
+      if (type === "document") {
+        await deleteDocument.mutateAsync(id);
+      } else {
+        await deleteSpreadsheet.mutateAsync(id);
+      }
+
+      addNotification({
+        title: "File Deleted",
+        message: `"${title}" has been moved to trash.`,
+        type: "success",
+      });
+    } catch (error) {
+      addNotification({
+        title: "Deletion Failed",
+        message: "An error occurred while deleting the file.",
+        type: "error",
+      });
     }
   };
 

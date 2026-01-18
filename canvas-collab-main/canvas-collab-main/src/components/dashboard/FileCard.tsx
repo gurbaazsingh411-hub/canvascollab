@@ -23,9 +23,10 @@ interface FileCardProps {
   file: FileItem;
   onClick?: () => void;
   onToggleStar?: () => void;
+  onDelete?: () => void;
 }
 
-export function FileCard({ file, onClick, onToggleStar }: FileCardProps) {
+export function FileCard({ file, onClick, onToggleStar, onDelete }: FileCardProps) {
   const Icon = file.type === "document" ? FileText : Table2;
   const typeColor = file.type === "document" ? "text-info" : "text-success";
   const typeBg = file.type === "document" ? "bg-info/10" : "bg-success/10";
@@ -82,7 +83,15 @@ export function FileCard({ file, onClick, onToggleStar }: FileCardProps) {
             <DropdownMenuItem>Duplicate</DropdownMenuItem>
             <DropdownMenuItem>Share</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete?.();
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
