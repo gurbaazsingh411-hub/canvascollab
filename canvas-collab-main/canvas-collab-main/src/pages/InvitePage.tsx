@@ -6,10 +6,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { workspacesApi } from "@/lib/api";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 export default function InvitePage() {
   const { token } = useParams<{ token: string }>();
   const { user, loading } = useAuth();
+  const { addNotification } = useNotifications();
   const navigate = useNavigate();
   const [status, setStatus] = useState<"idle" | "joining" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +54,11 @@ export default function InvitePage() {
       const inviteData = await workspacesApi.useInviteLink(token);
       const inviteDataAny = inviteData as any;
       setWorkspaceName(inviteDataAny.workspace.name);
+      addNotification({
+        title: "Joined Workspace",
+        message: `You are now a member of ${inviteDataAny.workspace.name}`,
+        type: "success",
+      });
       setStatus("success");
     } catch (err) {
       setStatus("error");
@@ -109,23 +116,23 @@ export default function InvitePage() {
                 </Button>
               </div>
             )}
-            
+
             {status === "joining" && (
               <div className="flex flex-col items-center gap-4">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto" />
                 <p>Joining workspace...</p>
               </div>
             )}
-            
+
             {status === "success" && (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">You're now a member of the workspace. You can access it from your dashboard.</p>
-                <Button onClick={() => navigate(`/workspace/${workspaceName}`)} className="w-full">
+                <Button onClick={() => navigate("/")} className="w-full">
                   Go to Dashboard
                 </Button>
               </div>
             )}
-            
+
             {status === "error" && (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">The invitation could not be processed. The link may be invalid or expired.</p>

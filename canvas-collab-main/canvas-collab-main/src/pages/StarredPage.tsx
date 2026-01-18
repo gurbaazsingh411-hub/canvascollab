@@ -3,7 +3,7 @@ import { FileBrowser } from "@/components/dashboard/FileBrowser";
 import { useFiles } from "@/hooks/use-files";
 
 export default function StarredPage() {
-    const { files, isLoading } = useFiles();
+    const { files, isLoading } = useFiles("all");
     const starredFiles = files?.filter(f => f.starred) || [];
 
     return (

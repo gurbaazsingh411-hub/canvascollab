@@ -50,11 +50,11 @@ export function AppSidebar() {
 
       {/* Search */}
       <div className="px-3 py-3">
-        <button className="flex w-full items-center gap-2 rounded-lg border border-sidebar-border bg-background px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-primary/50">
+        <Link to="/search" className="flex w-full items-center gap-2 rounded-lg border border-sidebar-border bg-background px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-primary/50">
           <Search className="h-4 w-4" />
           <span>Search...</span>
           <kbd className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded">⌘K</kbd>
-        </button>
+        </Link>
       </div>
 
       {/* New Document Button */}

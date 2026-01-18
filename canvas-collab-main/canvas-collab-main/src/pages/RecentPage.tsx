@@ -3,7 +3,7 @@ import { FileBrowser } from "@/components/dashboard/FileBrowser";
 import { useFiles } from "@/hooks/use-files";
 
 export default function RecentPage() {
-    const { files, isLoading } = useFiles();
+    const { files, isLoading } = useFiles("all");
 
     return (
         <AppLayout title="Recent Files">

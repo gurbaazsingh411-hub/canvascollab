@@ -190,3 +190,25 @@ export function useToggleStar() {
     },
   });
 }
+// Search hook
+export function useSearchFiles(queryText: string) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ["search-files", queryText],
+    queryFn: async () => {
+      if (!queryText.trim()) return [];
+
+      const [docs, sheets] = await Promise.all([
+        documentsApi.search(queryText),
+        spreadsheetsApi.search(queryText)
+      ]);
+
+      return [
+        ...(docs?.map((doc) => ({ ...doc, type: "document" as const })) || []),
+        ...(sheets?.map((sheet) => ({ ...sheet, type: "spreadsheet" as const })) || []),
+      ].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    },
+    enabled: !!user && queryText.length > 2,
+  });
+}

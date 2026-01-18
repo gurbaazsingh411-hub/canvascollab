@@ -48,10 +48,10 @@ export const todosApi = {
     } catch (err) {
       // Catch any other errors that might occur, particularly network errors
       // If it's a "table does not exist" related error, return empty array
-      if (err instanceof Error && 
-          (err.message.includes('does not exist') || 
-           err.message.includes('404') || 
-           err.message.includes('missing'))) {
+      if (err instanceof Error &&
+        (err.message.includes('does not exist') ||
+          err.message.includes('404') ||
+          err.message.includes('missing'))) {
         return [];
       }
       // Re-throw other errors
@@ -150,19 +150,19 @@ export const workspacesApi = {
         }
         throw membersError;
       }
-      
+
       // Cast members to any to avoid typing issues
       const typedMembers: any[] = members as any[];
-      
+
       // Then, get the profile information for each member
       if (typedMembers && typedMembers.length > 0) {
         const userIds = typedMembers.map(member => member.user_id);
-        
+
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
           .select("id, display_name, email, avatar_url")
           .in("id", userIds);
-          
+
         if (profilesError) {
           console.warn('Error fetching member profiles:', profilesError.message);
           // Return members without profiles
@@ -171,7 +171,7 @@ export const workspacesApi = {
             profile: null
           }));
         }
-        
+
         // Combine members with their profiles
         return typedMembers.map(member => {
           const profile = profiles?.find(p => p.id === member.user_id) || null;
@@ -181,7 +181,7 @@ export const workspacesApi = {
           };
         });
       }
-      
+
       return [];
     } catch (err) {
       console.error('Error fetching workspace members:', err);
@@ -235,34 +235,34 @@ export const workspacesApi = {
   async getAnalytics(workspaceId: string) {
     // Get all members of the workspace
     const members = await this.getMembers(workspaceId);
-    
+
     // Get all documents in the workspace
     const workspaceDocuments = await documentsApi.getAll(workspaceId);
-    
+
     // Get all spreadsheets in the workspace
     const workspaceSpreadsheets = await spreadsheetsApi.getAll(workspaceId);
-    
+
     // Get all todos
     const allTodos = await todosApi.getAll();
-    
+
     // Combine documents and spreadsheets as files
     const allFiles = [
-      ...workspaceDocuments.map(doc => ({...doc, type: 'document'})),
-      ...workspaceSpreadsheets.map(sheet => ({...sheet, type: 'spreadsheet'}))
+      ...workspaceDocuments.map(doc => ({ ...doc, type: 'document' })),
+      ...workspaceSpreadsheets.map(sheet => ({ ...sheet, type: 'spreadsheet' }))
     ];
-    
+
     // Organize data by member
     const membersWithDetails = members.map(member => {
       const userFiles = allFiles.filter(file => file.owner_id === member.user_id);
       const userTodos = allTodos.filter((todo: any) => todo.user_id === member.user_id);
-      
+
       return {
         ...member,
         files: userFiles,
         todos: userTodos
       };
     });
-    
+
     return {
       members: membersWithDetails,
       totalFiles: allFiles.length,
@@ -275,10 +275,10 @@ export const workspacesApi = {
   async generateInviteLink(workspaceId: string, role: string = 'member') {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("No user found");
-    
+
     // Generate a random token for the invite link
     const inviteToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    
+
     try {
       const { data, error } = await supabase
         .from("workspace_invites" as any)
@@ -290,7 +290,7 @@ export const workspacesApi = {
         })
         .select()
         .single();
-        
+
       if (error) {
         // If the table doesn't exist, throw a more descriptive error
         if (error.code === '42P01' || error.message.toLowerCase().includes('does not exist')) {
@@ -302,10 +302,10 @@ export const workspacesApi = {
       return data;
     } catch (err) {
       // Handle any other errors that might occur, particularly network errors
-      if (err instanceof Error && 
-          (err.message.includes('does not exist') || 
-           err.message.includes('404') || 
-           err.message.includes('missing'))) {
+      if (err instanceof Error &&
+        (err.message.includes('does not exist') ||
+          err.message.includes('404') ||
+          err.message.includes('missing'))) {
         console.warn('workspace_invites table does not exist:', err.message);
         throw new Error('Invite links feature is not available: Table does not exist');
       }
@@ -313,11 +313,11 @@ export const workspacesApi = {
       throw err;
     }
   },
-  
+
   async useInviteLink(token: string) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("No user found");
-    
+
     try {
       // Check if the invite token exists and is valid
       const { data: invite, error } = await supabase
@@ -327,18 +327,18 @@ export const workspacesApi = {
         .eq("used", false)
         .gte("expires_at", new Date().toISOString())
         .single();
-        
+
       if (error) {
         if (error.code === 'PGRST116' || error.code === '42P01' || error.message.toLowerCase().includes('does not exist')) {
           throw new Error("Invalid or expired invite link");
         }
         throw error;
       }
-      
+
       if (!invite) {
         throw new Error("Invalid or expired invite link");
       }
-      
+
       // Check if user is already a member of this workspace
       const inviteAny = invite as any;
       const { data: existingMembership } = await supabase
@@ -347,11 +347,11 @@ export const workspacesApi = {
         .eq("workspace_id", inviteAny.workspace_id)
         .eq("user_id", user.id)
         .maybeSingle();
-        
+
       if (existingMembership) {
         throw new Error("You are already a member of this workspace");
       }
-      
+
       // Add the user to the workspace
       const { error: memberError } = await supabase
         .from("workspace_members" as any)
@@ -360,24 +360,24 @@ export const workspacesApi = {
           user_id: user.id,
           role: inviteAny.role
         });
-        
+
       if (memberError) throw memberError;
-      
+
       // Mark the invite as used
       const { error: updateError } = await supabase
         .from("workspace_invites" as any)
         .update({ used: true })
         .eq("id", inviteAny.id);
-        
+
       if (updateError) console.error("Error marking invite as used:", updateError);
-      
+
       return invite;
     } catch (err) {
       // Handle any other errors that might occur, particularly network errors
-      if (err instanceof Error && 
-          (err.message.includes('does not exist') || 
-           err.message.includes('404') || 
-           err.message.includes('missing'))) {
+      if (err instanceof Error &&
+        (err.message.includes('does not exist') ||
+          err.message.includes('404') ||
+          err.message.includes('missing'))) {
         console.warn('workspace_invites table does not exist:', err.message);
         throw new Error('Invite links feature is not available: Table does not exist');
       }
@@ -395,7 +395,9 @@ export const documentsApi = {
       .select("*, profiles:owner_id(display_name, avatar_url)")
       .order("updated_at", { ascending: false });
 
-    if (workspaceId) {
+    if (workspaceId === "all") {
+      // Don't filter by workspace_id, get everything user has access to
+    } else if (workspaceId) {
       query = query.eq("workspace_id", workspaceId);
     } else {
       query = query.is("workspace_id", null);
@@ -454,6 +456,17 @@ export const documentsApi = {
   async toggleStar(id: string, starred: boolean) {
     return this.update(id, { starred });
   },
+
+  async search(queryText: string) {
+    const { data, error } = await supabase
+      .from("documents")
+      .select("*, profiles:owner_id(display_name, avatar_url)")
+      .ilike("title", `%${queryText}%`)
+      .order("updated_at", { ascending: false });
+
+    if (error) throw error;
+    return data;
+  },
 };
 
 // Spreadsheets API
@@ -464,7 +477,9 @@ export const spreadsheetsApi = {
       .select("*, profiles:owner_id(display_name, avatar_url)")
       .order("updated_at", { ascending: false });
 
-    if (workspaceId) {
+    if (workspaceId === "all") {
+      // Don't filter by workspace_id
+    } else if (workspaceId) {
       query = query.eq("workspace_id", workspaceId);
     } else {
       query = query.is("workspace_id", null);
@@ -521,6 +536,17 @@ export const spreadsheetsApi = {
 
   async toggleStar(id: string, starred: boolean) {
     return this.update(id, { starred });
+  },
+
+  async search(queryText: string) {
+    const { data, error } = await supabase
+      .from("spreadsheets")
+      .select("*, profiles:owner_id(display_name, avatar_url)")
+      .ilike("title", `%${queryText}%`)
+      .order("updated_at", { ascending: false });
+
+    if (error) throw error;
+    return data;
   },
 };
 

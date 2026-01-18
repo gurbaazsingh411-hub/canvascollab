@@ -15,10 +15,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { useFiles, useCreateDocument, useCreateSpreadsheet, useToggleStar } from "@/hooks/use-files";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { TodoList } from "@/components/dashboard/TodoList";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 export default function Index() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { addNotification } = useNotifications();
 
   // Workspace State
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
@@ -86,17 +88,32 @@ export default function Index() {
 
   const handleCreateDocument = async () => {
     const doc = await createDocument.mutateAsync({ workspaceId: selectedWorkspaceId || undefined });
+    addNotification({
+      title: "Document Created",
+      message: `"${doc.title}" has been created.`,
+      type: "success",
+    });
     navigate(`/document/${doc.id}`);
   };
 
   const handleCreateSpreadsheet = async () => {
     const sheet = await createSpreadsheet.mutateAsync({ workspaceId: selectedWorkspaceId || undefined });
+    addNotification({
+      title: "Spreadsheet Created",
+      message: `"${sheet.title}" has been created.`,
+      type: "success",
+    });
     navigate(`/spreadsheet/${sheet.id}`);
   };
 
   const handleCreateWorkspace = async () => {
     if (!newWorkspaceName.trim()) return;
     await createWorkspace.mutateAsync(newWorkspaceName);
+    addNotification({
+      title: "Workspace Created",
+      message: `Your new workspace "${newWorkspaceName}" is ready.`,
+      type: "success",
+    });
     setNewWorkspaceName("");
     setIsCreateWorkspaceOpen(false);
   };

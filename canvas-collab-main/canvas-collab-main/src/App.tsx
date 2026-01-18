@@ -20,6 +20,7 @@ import TrashPage from "./pages/TrashPage";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import WorkspaceDocumentsPage from "./pages/WorkspaceDocumentsPage";
 import WorkspaceSpreadsheetsPage from "./pages/WorkspaceSpreadsheetsPage";
+import SearchPage from "./pages/SearchPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
                 <Route path="/settings" element={<ProfileSettingsPage />} />
                 <Route path="/workspace/documents" element={<WorkspaceDocumentsPage />} />
                 <Route path="/workspace/spreadsheets" element={<WorkspaceSpreadsheetsPage />} />
+                <Route path="/search" element={<SearchPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

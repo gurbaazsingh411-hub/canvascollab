@@ -22,7 +22,9 @@ export default function AuthPage() {
 
   // Redirect if already logged in
   if (user) {
-    navigate("/");
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect") || "/";
+    navigate(redirect);
     return null;
   }
 
@@ -46,16 +48,19 @@ export default function AuthPage() {
       }
     }
 
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect") || "/";
+
     const { error } = await signIn(email, password);
-    
+
     if (error) {
-      setError(error.message === "Invalid login credentials" 
+      setError(error.message === "Invalid login credentials"
         ? "Invalid email or password. Please try again."
         : error.message);
     } else {
-      navigate("/");
+      navigate(redirect);
     }
-    
+
     setIsLoading(false);
   };
 
@@ -82,7 +87,7 @@ export default function AuthPage() {
     }
 
     const { error } = await signUp(email, password, displayName);
-    
+
     if (error) {
       if (error.message.includes("already registered")) {
         setError("This email is already registered. Please sign in instead.");
@@ -92,7 +97,7 @@ export default function AuthPage() {
     } else {
       setSuccess("Account created! Please check your email to confirm your account.");
     }
-    
+
     setIsLoading(false);
   };
 

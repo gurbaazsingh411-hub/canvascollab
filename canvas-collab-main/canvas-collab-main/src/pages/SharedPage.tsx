@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 export default function SharedPage() {
     const { user } = useAuth();
-    const { files, isLoading } = useFiles();
+    const { files, isLoading } = useFiles("all");
 
     // Filter files where I am NOT the owner
     const sharedFiles = files?.filter(f => f.owner_id !== user?.id) || [];
