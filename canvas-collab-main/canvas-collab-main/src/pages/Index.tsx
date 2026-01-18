@@ -10,12 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useFiles, useCreateDocument, useCreateSpreadsheet, useToggleStar } from "@/hooks/use-files";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { TodoList } from "@/components/dashboard/TodoList";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { workspacesApi } from "@/lib/api";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -35,6 +37,119 @@ export default function Index() {
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filter, setFilter] = useState<"all" | "documents" | "spreadsheets">("all");
+
+  // New Workspace Flow State
+  const [createdWorkspace, setCreatedWorkspace] = useState<any>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
+
+  const handleCreateWorkspace = async () => {
+    if (!newWorkspaceName.trim() || !user) return;
+    try {
+      const ws = await createWorkspace.mutateAsync({ name: newWorkspaceName, ownerId: user.id }) as any;
+      setCreatedWorkspace(ws);
+      setIsGeneratingInvite(true);
+
+      // Generate invite link automatically
+      const invite = await workspacesApi.generateInviteLink(ws.id);
+      const url = `${window.location.origin}/invite/${(invite as any).invite_token}`;
+      setInviteLink(url);
+      setIsGeneratingInvite(false);
+
+      addNotification({
+        title: "Workspace Created",
+        message: `"${ws.name}" is ready. Invite your team!`,
+        type: "success"
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDone = () => {
+    setIsCreateWorkspaceOpen(false);
+    setCreatedWorkspace(null);
+    setInviteLink(null);
+    setNewWorkspaceName("");
+  };
+
+  // Onboarding View (Empty State)
+  if (!isLoading && workspaces && workspaces.length === 0) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
+        <div className="max-w-md w-full text-center space-y-8 animate-fade-in">
+          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10 mx-auto">
+            <Building className="h-10 w-10 text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold">Welcome to CollabDocs</h1>
+            <p className="text-muted-foreground text-lg">
+              Every great project starts with a workspace. Create your first one to get started.
+            </p>
+          </div>
+
+          <Dialog open={isCreateWorkspaceOpen} onOpenChange={(open) => {
+            setIsCreateWorkspaceOpen(open);
+            if (!open) handleDone();
+          }}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="w-full h-14 text-lg">
+                <Plus className="mr-2 h-5 w-5" /> Add Workspace
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Create New Workspace</DialogTitle>
+              </DialogHeader>
+              <div className="py-4 space-y-4">
+                {!createdWorkspace ? (
+                  <div className="space-y-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Workspace Name</Label>
+                      <Input
+                        id="name"
+                        placeholder="e.g. Acme Team, Marketing, Personal"
+                        value={newWorkspaceName}
+                        onChange={(e) => setNewWorkspaceName(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                    <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 text-center">
+                      <p className="font-semibold text-primary">Workspace Created!</p>
+                      <p className="text-sm text-muted-foreground">Share this link with your team to invite them.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Invite Link</Label>
+                      <div className="flex gap-2">
+                        <Input value={inviteLink || "Generating..."} readOnly className="bg-muted" />
+                        <Button variant="secondary" onClick={() => inviteLink && navigator.clipboard.writeText(inviteLink)}>
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                {!createdWorkspace ? (
+                  <Button onClick={handleCreateWorkspace} disabled={!newWorkspaceName.trim() || createWorkspace.isPending}>
+                    {createWorkspace.isPending ? "Creating..." : "Create Workspace"}
+                  </Button>
+                ) : (
+                  <Button onClick={handleDone} className="w-full">
+                    Done
+                  </Button>
+                )}
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+    );
+  }
 
   // Show auth prompt if not logged in
   if (!authLoading && !user) {
@@ -104,18 +219,6 @@ export default function Index() {
       type: "success",
     });
     navigate(`/spreadsheet/${sheet.id}`);
-  };
-
-  const handleCreateWorkspace = async () => {
-    if (!newWorkspaceName.trim()) return;
-    await createWorkspace.mutateAsync(newWorkspaceName);
-    addNotification({
-      title: "Workspace Created",
-      message: `Your new workspace "${newWorkspaceName}" is ready.`,
-      type: "success",
-    });
-    setNewWorkspaceName("");
-    setIsCreateWorkspaceOpen(false);
   };
 
   const currentWorkspace = workspaces?.find(w => w.id === selectedWorkspaceId);

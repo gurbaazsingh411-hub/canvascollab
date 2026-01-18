@@ -13,7 +13,8 @@ export function useWorkspaces() {
     });
 
     const createWorkspace = useMutation({
-        mutationFn: (name: string) => workspacesApi.create(name, user!.id),
+        mutationFn: ({ name, ownerId }: { name: string; ownerId: string }) =>
+            workspacesApi.create(name, ownerId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["workspaces"] });
         },
@@ -34,7 +35,7 @@ export function useWorkspaces() {
     });
 
     return {
-        workspaces: workspacesQuery.data as Workspace[] | undefined,
+        workspaces: workspacesQuery.data as unknown as Workspace[] | undefined,
         isLoading: workspacesQuery.isLoading,
         createWorkspace,
         updateWorkspace,

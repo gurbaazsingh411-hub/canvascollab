@@ -16,6 +16,8 @@ import {
 import { exportToPDF, exportToDOCX } from "@/lib/export";
 import { toast } from "sonner";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { useHeartbeat } from "@/hooks/use-heartbeat";
+import { useDocument } from "@/hooks/use-files";
 
 export default function DocumentPage() {
   const { id } = useParams();
@@ -24,6 +26,10 @@ export default function DocumentPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const { addNotification } = useNotifications();
+  const { data: doc } = useDocument(id);
+
+  // Track activity
+  useHeartbeat(doc?.workspace_id, id, "document");
 
   const handleExport = async (format: 'pdf' | 'docx') => {
     setIsExporting(true);

@@ -231,46 +231,6 @@ export const workspacesApi = {
     if (error) throw error;
   },
 
-  // Get workspace analytics data
-  async getAnalytics(workspaceId: string) {
-    // Get all members of the workspace
-    const members = await this.getMembers(workspaceId);
-
-    // Get all documents in the workspace
-    const workspaceDocuments = await documentsApi.getAll(workspaceId);
-
-    // Get all spreadsheets in the workspace
-    const workspaceSpreadsheets = await spreadsheetsApi.getAll(workspaceId);
-
-    // Get all todos
-    const allTodos = await todosApi.getAll();
-
-    // Combine documents and spreadsheets as files
-    const allFiles = [
-      ...workspaceDocuments.map(doc => ({ ...doc, type: 'document' })),
-      ...workspaceSpreadsheets.map(sheet => ({ ...sheet, type: 'spreadsheet' }))
-    ];
-
-    // Organize data by member
-    const membersWithDetails = members.map(member => {
-      const userFiles = allFiles.filter(file => file.owner_id === member.user_id);
-      const userTodos = allTodos.filter((todo: any) => todo.user_id === member.user_id);
-
-      return {
-        ...member,
-        files: userFiles,
-        todos: userTodos
-      };
-    });
-
-    return {
-      members: membersWithDetails,
-      totalFiles: allFiles.length,
-      totalTodos: allTodos.length,
-      pendingTodos: allTodos.filter((todo: any) => !todo.completed).length
-    };
-  },
-
   // Invite functions
   async generateInviteLink(workspaceId: string, role: string = 'member') {
     const { data: { user } } = await supabase.auth.getUser();
@@ -312,6 +272,58 @@ export const workspacesApi = {
       // Re-throw other errors
       throw err;
     }
+  },
+
+  async updateMemberRole(workspaceId: string, userId: string, role: string) {
+    const { data, error } = await supabase
+      .from("workspace_members" as any)
+      .update({ role })
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async getAnalytics(workspaceId: string) {
+    const { data: members, error: membersError } = await supabase
+      .from("workspace_members" as any)
+      .select("*, profiles:user_id(display_name, avatar_url, email)")
+      .eq("workspace_id", workspaceId);
+
+    if (membersError) throw membersError;
+
+    const { data: docs, error: docsError } = await supabase
+      .from("documents")
+      .select("*")
+      .eq("workspace_id", workspaceId);
+
+    if (docsError) throw docsError;
+
+    const { data: sheets, error: sheetsError } = await supabase
+      .from("spreadsheets")
+      .select("*")
+      .eq("workspace_id", workspaceId);
+
+    if (sheetsError) throw sheetsError;
+
+    const { data: activity, error: activityError } = await (supabase
+      .from("user_activity" as any)
+      .select("*")
+      .eq("workspace_id", workspaceId) as any);
+
+    if (activityError) {
+      if (!activityError.message.includes("does not exist")) throw activityError;
+    }
+
+    return {
+      members: members || [],
+      documents: docs || [],
+      spreadsheets: sheets || [],
+      activity: activity || []
+    };
   },
 
   async useInviteLink(token: string) {
@@ -387,20 +399,69 @@ export const workspacesApi = {
   }
 };
 
+export const userActivityApi = {
+  async heartbeat(workspaceId: string, fileId: string, fileType: "document" | "spreadsheet") {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Use upsert with calculation for total_seconds_spent
+    // We ping every 30 seconds
+    const { data: existing } = await (supabase
+      .from("user_activity" as any)
+      .select("total_seconds_spent")
+      .eq("user_id", user.id)
+      .eq("file_id", fileId)
+      .maybeSingle() as any);
+
+    const seconds = ((existing as any)?.total_seconds_spent || 0) + 30;
+
+    const { error } = await supabase
+      .from("user_activity" as any)
+      .upsert({
+        user_id: user.id,
+        workspace_id: workspaceId,
+        file_id: fileId,
+        file_type: fileType,
+        last_ping: new Date().toISOString(),
+        total_seconds_spent: seconds
+      }, { onConflict: 'user_id,file_id' });
+
+    if (error) console.error("Heartbeat error:", error);
+  },
+
+  async getActiveInWorkspace(workspaceId: string) {
+    // Return users who pinged in the last 2 minutes
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from("user_activity" as any)
+      .select("*, profiles:user_id(display_name, avatar_url)")
+      .eq("workspace_id", workspaceId)
+      .gt("last_ping", twoMinutesAgo);
+
+    if (error) throw error;
+    return data;
+  }
+};
+
 // Documents API
 export const documentsApi = {
   async getAll(workspaceId?: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
     let query = supabase
       .from("documents")
       .select("*, profiles:owner_id(display_name, avatar_url)")
       .order("updated_at", { ascending: false });
 
     if (workspaceId === "all") {
-      // Don't filter by workspace_id, get everything user has access to
+      // Don't filter by workspace_id, get everything user has access to (RLS handled)
     } else if (workspaceId) {
       query = query.eq("workspace_id", workspaceId);
     } else {
-      query = query.is("workspace_id", null);
+      // Personal Workspace: owner files with NO workspace_id
+      query = query.is("workspace_id", null).eq("owner_id", user.id);
     }
 
     const { data, error } = await query;
@@ -472,17 +533,21 @@ export const documentsApi = {
 // Spreadsheets API
 export const spreadsheetsApi = {
   async getAll(workspaceId?: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
     let query = supabase
       .from("spreadsheets")
       .select("*, profiles:owner_id(display_name, avatar_url)")
       .order("updated_at", { ascending: false });
 
     if (workspaceId === "all") {
-      // Don't filter by workspace_id
+      // Don't filter by workspace_id, get everything user has access to
     } else if (workspaceId) {
       query = query.eq("workspace_id", workspaceId);
     } else {
-      query = query.is("workspace_id", null);
+      // Personal Workspace: owner files with NO workspace_id
+      query = query.is("workspace_id", null).eq("owner_id", user.id);
     }
 
     const { data, error } = await query;
