@@ -331,3 +331,51 @@
 .animate-scale-in {
   animation: scale-in 0.15s ease-out;
 }
+/* ReactGrid Dark Mode Overrides */
+.dark .reactgrid {
+  --rg-background-color: hsl(var(--card));
+  --rg-text-color: hsl(var(--foreground));
+  --rg-border-color: hsl(var(--border));
+  --rg-header-background-color: hsl(var(--muted));
+  --rg-header-text-color: hsl(var(--muted-foreground));
+  --rg-selection-border-color: hsl(var(--primary));
+  --rg-selection-background-color: hsl(var(--primary) / 0.1);
+  --rg-context-menu-background-color: hsl(var(--popover));
+  --rg-context-menu-text-color: hsl(var(--popover-foreground));
+  --rg-context-menu-border-color: hsl(var(--border));
+  --rg-context-menu-item-hover-background-color: hsl(var(--accent));
+  background-color: hsl(var(--card)) !important;
+}
+
+.dark .rg-pane {
+  background-color: hsl(var(--card)) !important;
+}
+
+.dark .rg-cell {
+  background-color: hsl(var(--card)) !important;
+  border-color: hsl(var(--border) / 0.5) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .rg-header-cell {
+  background-color: hsl(var(--muted) / 0.5) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  font-weight: 600 !important;
+}
+
+.dark .rg-cell.selected {
+  background-color: hsl(var(--primary) / 0.15) !important;
+}
+
+.dark .rg-selection-col-header, 
+.dark .rg-selection-row-header {
+  background-color: hsl(var(--primary) / 0.2) !important;
+}
+
+/* Fix for input in dark mode grid */
+.dark .rg-editor-container input {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--primary)) !important;
+  border-radius: 2px;
+}

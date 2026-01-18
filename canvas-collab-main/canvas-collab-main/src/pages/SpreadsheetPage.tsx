@@ -59,18 +59,15 @@ export default function SpreadsheetPage() {
           <div>
             <input
               type="text"
-              defaultValue={id === "new" ? "Untitled Spreadsheet" : "Q1 Budget"}
-              className="bg-transparent text-sm font-semibold focus:outline-none"
+              defaultValue={id === "new" ? "Untitled Spreadsheet" : (sheet?.title || "Loading...")}
+              className="bg-transparent text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary/20 rounded px-1 transition-all placeholder:text-muted-foreground/50"
             />
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>File</span>
-              <span>Edit</span>
-              <span>View</span>
-              <span>Insert</span>
-              <span>Format</span>
-              <span>Data</span>
-              <span>Tools</span>
-              <span>Help</span>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground px-1 mt-0.5">
+              {['File', 'Edit', 'View', 'Insert', 'Format', 'Data', 'Tools', 'Help'].map((item) => (
+                <span key={item} className="cursor-pointer hover:text-foreground transition-colors">
+                  {item}
+                </span>
+              ))}
             </div>
           </div>
         </div>
