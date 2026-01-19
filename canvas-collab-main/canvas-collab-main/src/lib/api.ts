@@ -291,7 +291,7 @@ export const workspacesApi = {
     // Fetch members with profile information
     const { data: members, error: membersError } = await supabase
       .from("workspace_members" as any)
-      .select("*, profiles:profiles!user_id(display_name, avatar_url, email)")
+      .select("*, profiles!user_id(display_name, avatar_url, email)")
       .eq("workspace_id", workspaceId);
 
     if (membersError) {
@@ -457,7 +457,7 @@ export const userActivityApi = {
 
     const { data, error } = await supabase
       .from("user_activity" as any)
-      .select("*, profiles:profiles!user_id(display_name, avatar_url)")
+      .select("*, profiles!user_id(display_name, avatar_url)")
       .eq("workspace_id", workspaceId)
       .gt("last_ping", twoMinutesAgo);
 
@@ -474,7 +474,7 @@ export const documentsApi = {
 
     let query = supabase
       .from("documents")
-      .select("*, profiles:profiles!owner_id(display_name, avatar_url)")
+      .select("*, profiles!owner_id(display_name, avatar_url)")
       .order("updated_at", { ascending: false });
 
     if (workspaceId === "all") {
@@ -496,7 +496,7 @@ export const documentsApi = {
   async getById(id: string) {
     const { data, error } = await supabase
       .from("documents")
-      .select("*, profiles:profiles!owner_id(display_name, avatar_url)")
+      .select("*, profiles!owner_id(display_name, avatar_url)")
       .eq("id", id)
       .maybeSingle();
 
@@ -543,7 +543,7 @@ export const documentsApi = {
   async search(queryText: string) {
     const { data, error } = await supabase
       .from("documents")
-      .select("*, profiles:profiles!owner_id(display_name, avatar_url)")
+      .select("*, profiles!owner_id(display_name, avatar_url)")
       .ilike("title", `%${queryText}%`)
       .order("updated_at", { ascending: false });
 
@@ -560,7 +560,7 @@ export const spreadsheetsApi = {
 
     let query = supabase
       .from("spreadsheets")
-      .select("*, profiles:profiles!owner_id(display_name, avatar_url)")
+      .select("*, profiles!owner_id(display_name, avatar_url)")
       .order("updated_at", { ascending: false });
 
     if (workspaceId === "all") {
@@ -581,7 +581,7 @@ export const spreadsheetsApi = {
   async getById(id: string) {
     const { data, error } = await supabase
       .from("spreadsheets")
-      .select("*, profiles:profiles!owner_id(display_name, avatar_url)")
+      .select("*, profiles!owner_id(display_name, avatar_url)")
       .eq("id", id)
       .maybeSingle();
 
@@ -628,7 +628,7 @@ export const spreadsheetsApi = {
   async search(queryText: string) {
     const { data, error } = await supabase
       .from("spreadsheets")
-      .select("*, profiles:profiles!owner_id(display_name, avatar_url)")
+      .select("*, profiles!owner_id(display_name, avatar_url)")
       .ilike("title", `%${queryText}%`)
       .order("updated_at", { ascending: false });
 
@@ -676,7 +676,7 @@ export const permissionsApi = {
   async getDocumentPermissions(documentId: string) {
     const { data, error } = await supabase
       .from("document_permissions")
-      .select("*, profiles:user_id(display_name, email, avatar_url)")
+      .select("*, profiles!user_id(display_name, email, avatar_url)")
       .eq("document_id", documentId);
 
     if (error) throw error;
@@ -686,7 +686,7 @@ export const permissionsApi = {
   async getSpreadsheetPermissions(spreadsheetId: string) {
     const { data, error } = await supabase
       .from("document_permissions")
-      .select("*, profiles:user_id(display_name, email, avatar_url)")
+      .select("*, profiles!user_id(display_name, email, avatar_url)")
       .eq("spreadsheet_id", spreadsheetId);
 
     if (error) throw error;
@@ -770,10 +770,10 @@ export const commentsApi = {
       .from("comments" as any)
       .select(`
         *,
-        profiles:user_id(display_name, email, avatar_url),
+        profiles!user_id(display_name, email, avatar_url),
         comment_replies(
           *,
-          profiles:user_id(display_name, email, avatar_url)
+          profiles!user_id(display_name, email, avatar_url)
         )
       `)
       .eq("document_id", documentId)
@@ -793,7 +793,7 @@ export const commentsApi = {
       .insert(comment)
       .select(`
         *,
-        profiles:user_id(display_name, email, avatar_url)
+        profiles!user_id(display_name, email, avatar_url)
       `)
       .single();
 
@@ -834,7 +834,7 @@ export const repliesApi = {
       .insert(reply)
       .select(`
         *,
-        profiles:user_id(display_name, email, avatar_url)
+        profiles!user_id(display_name, email, avatar_url)
       `)
       .single();
 
@@ -857,7 +857,7 @@ export const enhancedPermissionsApi = {
   async getDocumentCollaborators(documentId: string) {
     const { data, error } = await supabase
       .from("document_permissions")
-      .select("*, profiles:user_id(display_name, email, avatar_url)")
+      .select("*, profiles!user_id(display_name, email, avatar_url)")
       .eq("document_id", documentId);
 
     if (error) throw error;
@@ -873,7 +873,7 @@ export const enhancedPermissionsApi = {
     const { data, error } = await supabase
       .from("document_permissions")
       .insert(invitation)
-      .select("*, profiles:user_id(display_name, email, avatar_url)")
+      .select("*, profiles!user_id(display_name, email, avatar_url)")
       .single();
 
     if (error) throw error;
