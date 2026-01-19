@@ -114,10 +114,10 @@ export const todosApi = {
 
 export const workspacesApi = {
   async getAll() {
-    const { data, error } = await (supabase
+    const { data, error } = await supabase
       .from("workspaces" as any)
-      .select("*, profiles:owner_id(display_name, avatar_url)")
-      .order("created_at", { ascending: false }) as any);
+      .select("*, profiles!owner_id(display_name, avatar_url)")
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
     return data;
@@ -288,41 +288,63 @@ export const workspacesApi = {
   },
 
   async getAnalytics(workspaceId: string) {
+    // Fetch members with profile information
     const { data: members, error: membersError } = await supabase
       .from("workspace_members" as any)
-      .select("*, profiles:user_id(display_name, avatar_url, email)")
+      .select("*, profiles:profiles!user_id(display_name, avatar_url, email)")
       .eq("workspace_id", workspaceId);
 
-    if (membersError) throw membersError;
+    if (membersError) {
+      console.warn("Error fetching workspace members for analytics:", membersError);
+    }
 
+    // Fetch documents
     const { data: docs, error: docsError } = await supabase
       .from("documents")
       .select("*")
       .eq("workspace_id", workspaceId);
 
-    if (docsError) throw docsError;
+    if (docsError) {
+      console.warn("Error fetching documents for analytics:", docsError);
+    }
 
+    // Fetch spreadsheets
     const { data: sheets, error: sheetsError } = await supabase
       .from("spreadsheets")
       .select("*")
       .eq("workspace_id", workspaceId);
 
-    if (sheetsError) throw sheetsError;
+    if (sheetsError) {
+      console.warn("Error fetching spreadsheets for analytics:", sheetsError);
+    }
 
-    const { data: activity, error: activityError } = await (supabase
-      .from("user_activity" as any)
-      .select("*")
-      .eq("workspace_id", workspaceId) as any);
+    // Fetch user activity - handle case where table might not exist
+    let activity = [];
+    try {
+      const { data: activityData, error: activityError } = await supabase
+        .from("user_activity" as any)
+        .select("*")
+        .eq("workspace_id", workspaceId);
 
-    if (activityError) {
-      if (!activityError.message.includes("does not exist")) throw activityError;
+      if (activityError) {
+        // Handle common "table does not exist" or permission errors
+        if (activityError.code === '42P01' || activityError.code === '42501' || activityError.message.includes("does not exist")) {
+          console.warn("user_activity table not available or permission denied:", activityError.message);
+        } else {
+          throw activityError;
+        }
+      } else {
+        activity = activityData || [];
+      }
+    } catch (err) {
+      console.warn("Caught error fetching user activity:", err);
     }
 
     return {
       members: members || [],
       documents: docs || [],
       spreadsheets: sheets || [],
-      activity: activity || []
+      activity: activity
     };
   },
 
@@ -334,7 +356,7 @@ export const workspacesApi = {
       // Check if the invite token exists and is valid
       const { data: invite, error } = await supabase
         .from("workspace_invites" as any)
-        .select("*, workspace:workspace_id(id, name)")
+        .select("*, workspace:workspaces!workspace_id(id, name)")
         .eq("invite_token", token)
         .eq("used", false)
         .gte("expires_at", new Date().toISOString())
@@ -435,7 +457,7 @@ export const userActivityApi = {
 
     const { data, error } = await supabase
       .from("user_activity" as any)
-      .select("*, profiles:user_id(display_name, avatar_url)")
+      .select("*, profiles:profiles!user_id(display_name, avatar_url)")
       .eq("workspace_id", workspaceId)
       .gt("last_ping", twoMinutesAgo);
 
@@ -452,7 +474,7 @@ export const documentsApi = {
 
     let query = supabase
       .from("documents")
-      .select("*, profiles:owner_id(display_name, avatar_url)")
+      .select("*, profiles:profiles!owner_id(display_name, avatar_url)")
       .order("updated_at", { ascending: false });
 
     if (workspaceId === "all") {
@@ -474,7 +496,7 @@ export const documentsApi = {
   async getById(id: string) {
     const { data, error } = await supabase
       .from("documents")
-      .select("*, profiles:owner_id(display_name, avatar_url)")
+      .select("*, profiles:profiles!owner_id(display_name, avatar_url)")
       .eq("id", id)
       .maybeSingle();
 
@@ -521,7 +543,7 @@ export const documentsApi = {
   async search(queryText: string) {
     const { data, error } = await supabase
       .from("documents")
-      .select("*, profiles:owner_id(display_name, avatar_url)")
+      .select("*, profiles:profiles!owner_id(display_name, avatar_url)")
       .ilike("title", `%${queryText}%`)
       .order("updated_at", { ascending: false });
 
@@ -538,7 +560,7 @@ export const spreadsheetsApi = {
 
     let query = supabase
       .from("spreadsheets")
-      .select("*, profiles:owner_id(display_name, avatar_url)")
+      .select("*, profiles:profiles!owner_id(display_name, avatar_url)")
       .order("updated_at", { ascending: false });
 
     if (workspaceId === "all") {
@@ -559,7 +581,7 @@ export const spreadsheetsApi = {
   async getById(id: string) {
     const { data, error } = await supabase
       .from("spreadsheets")
-      .select("*, profiles:owner_id(display_name, avatar_url)")
+      .select("*, profiles:profiles!owner_id(display_name, avatar_url)")
       .eq("id", id)
       .maybeSingle();
 
@@ -606,7 +628,7 @@ export const spreadsheetsApi = {
   async search(queryText: string) {
     const { data, error } = await supabase
       .from("spreadsheets")
-      .select("*, profiles:owner_id(display_name, avatar_url)")
+      .select("*, profiles:profiles!owner_id(display_name, avatar_url)")
       .ilike("title", `%${queryText}%`)
       .order("updated_at", { ascending: false });
 

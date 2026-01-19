@@ -15,7 +15,7 @@ interface WorkspaceMemberWithDetails {
   user_id: string;
   role: string;
   joined_at: string;
-  profile: {
+  profiles: {
     id: string;
     display_name: string;
     email: string;
@@ -35,18 +35,32 @@ export default function WorkspaceAnalyticsPage() {
 
   const workspace = workspaces?.find((w) => w.id === id);
 
-  // Check if current user is the workspace owner or admin
+  // Derived values for access checking
   const isOwner = workspace?.owner_id === user?.id;
   const isUserAdmin = analyticsData?.members?.find((m: any) => m.user_id === user?.id)?.role === 'admin';
-  const hasAccess = isOwner || isUserAdmin;
+
+  // Initially allow fetch if id is present and it's the owner 
+  // OR if we don't have analytics data yet (we'll check admin status after first fetch)
+  const [hasAccess, setHasAccess] = useState(false);
 
   useEffect(() => {
-    if (!id || !hasAccess) {
-      if (!id) setIsLoading(false);
+    const isOwner = workspace?.owner_id === user?.id;
+    const isUserAdmin = analyticsData?.members?.find((m: any) => m.user_id === user?.id)?.role === 'admin';
+    setHasAccess(isOwner || isUserAdmin);
+  }, [workspace, user, analyticsData]);
+
+  useEffect(() => {
+    if (!id) {
+      setIsLoading(false);
       return;
     }
 
     const fetchAnalyticsData = async () => {
+      // If we already know we don't have access and it's not the first load, return
+      const isOwner = workspace?.owner_id === user?.id;
+      if (workspace && !isOwner && analyticsData && !hasAccess) {
+        return;
+      }
       setIsLoading(true);
       try {
         const data = await workspacesApi.getAnalytics(id);
