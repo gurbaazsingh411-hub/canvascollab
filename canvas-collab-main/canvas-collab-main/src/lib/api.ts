@@ -114,13 +114,37 @@ export const todosApi = {
 
 export const workspacesApi = {
   async getAll() {
+    // Attempt fast join
     const { data, error } = await supabase
       .from("workspaces" as any)
-      .select("*, profiles!owner_id(display_name, avatar_url)")
+      .select("*, profiles:profiles!owner_id(display_name, avatar_url)")
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
-    return data;
+    if (!error) return data;
+
+    // Fallback if join fails
+    console.warn("Workspaces join failed, using fallback:", error.message);
+    const { data: workspaces, error: wsError } = await supabase
+      .from("workspaces" as any)
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (wsError) throw wsError;
+
+    if (workspaces && workspaces.length > 0) {
+      const ownerIds = (workspaces as any[]).map(w => w.owner_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url")
+        .in("id", ownerIds);
+
+      return (workspaces as any[]).map(w => ({
+        ...w,
+        profiles: profiles?.find(p => p.id === w.owner_id) || null
+      }));
+    }
+
+    return workspaces;
   },
 
   async create(name: string, owner_id: string) {
@@ -288,14 +312,40 @@ export const workspacesApi = {
   },
 
   async getAnalytics(workspaceId: string) {
-    // Fetch members with profile information
-    const { data: members, error: membersError } = await supabase
+    // try to fetch members with profile information in one go
+    // if this fails (due to migration not applied or cache stale), we'll do a two-step fetch
+    let { data: members, error: membersError } = await supabase
       .from("workspace_members" as any)
-      .select("*, profiles!user_id(display_name, avatar_url, email)")
+      .select("*, profiles:profiles!user_id(display_name, avatar_url, email)")
       .eq("workspace_id", workspaceId);
 
     if (membersError) {
-      console.warn("Error fetching workspace members for analytics:", membersError);
+      console.warn("Direct join failed, falling back to manual join for analytics members:", membersError.message);
+
+      // Fallback: manual join
+      const { data: basicMembers, error: basicError } = await supabase
+        .from("workspace_members" as any)
+        .select("*")
+        .eq("workspace_id", workspaceId);
+
+      if (basicError) {
+        console.error("Error fetching workspace members (basic):", basicError);
+      } else if (basicMembers && basicMembers.length > 0) {
+        const userIds = (basicMembers as any[]).map(m => m.user_id);
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, display_name, avatar_url, email")
+          .in("id", userIds);
+
+        if (profilesError) {
+          console.error("Error fetching profiles for fallback:", profilesError);
+        }
+
+        members = (basicMembers as any[]).map(m => ({
+          ...m,
+          profiles: profiles?.find(p => p.id === m.user_id) || null
+        }));
+      }
     }
 
     // Fetch documents
@@ -326,18 +376,11 @@ export const workspacesApi = {
         .select("*")
         .eq("workspace_id", workspaceId);
 
-      if (activityError) {
-        // Handle common "table does not exist" or permission errors
-        if (activityError.code === '42P01' || activityError.code === '42501' || activityError.message.includes("does not exist")) {
-          console.warn("user_activity table not available or permission denied:", activityError.message);
-        } else {
-          throw activityError;
-        }
-      } else {
+      if (!activityError) {
         activity = activityData || [];
       }
     } catch (err) {
-      console.warn("Caught error fetching user activity:", err);
+      console.warn("Activity fetch skipped:", err);
     }
 
     return {
@@ -452,7 +495,6 @@ export const userActivityApi = {
   },
 
   async getActiveInWorkspace(workspaceId: string) {
-    // Return users who pinged in the last 2 minutes
     const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
 
     const { data, error } = await supabase
@@ -461,8 +503,31 @@ export const userActivityApi = {
       .eq("workspace_id", workspaceId)
       .gt("last_ping", twoMinutesAgo);
 
-    if (error) throw error;
-    return data;
+    if (!error) return data;
+
+    // Fallback
+    const { data: activity, error: actError } = await supabase
+      .from("user_activity" as any)
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .gt("last_ping", twoMinutesAgo);
+
+    if (actError) throw actError;
+
+    if (activity && activity.length > 0) {
+      const userIds = (activity as any[]).map(a => a.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url")
+        .in("id", userIds);
+
+      return (activity as any[]).map(a => ({
+        ...a,
+        profiles: profiles?.find(p => p.id === a.user_id) || null
+      }));
+    }
+
+    return activity;
   }
 };
 
@@ -478,18 +543,42 @@ export const documentsApi = {
       .order("updated_at", { ascending: false });
 
     if (workspaceId === "all") {
-      // Don't filter by workspace_id, get everything user has access to (RLS handled)
     } else if (workspaceId) {
       query = query.eq("workspace_id", workspaceId);
     } else {
-      // Personal Workspace: owner files with NO workspace_id
       query = query.is("workspace_id", null).eq("owner_id", user.id);
     }
 
     const { data, error } = await query;
+    if (!error) return data;
 
-    if (error) throw error;
-    return data;
+    // Fallback
+    let baseQuery = supabase
+      .from("documents")
+      .select("*")
+      .order("updated_at", { ascending: false });
+
+    if (workspaceId === "all") {
+    } else if (workspaceId) {
+      baseQuery = baseQuery.eq("workspace_id", workspaceId);
+    } else {
+      baseQuery = baseQuery.is("workspace_id", null).eq("owner_id", user.id);
+    }
+
+    const { data: docs } = await baseQuery;
+    if (docs && docs.length > 0) {
+      const ownerIds = (docs as any[]).map(d => d.owner_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url")
+        .in("id", ownerIds);
+
+      return (docs as any[]).map(d => ({
+        ...d,
+        profiles: profiles?.find(p => p.id === d.owner_id) || null
+      }));
+    }
+    return docs || [];
   },
 
 
@@ -564,18 +653,42 @@ export const spreadsheetsApi = {
       .order("updated_at", { ascending: false });
 
     if (workspaceId === "all") {
-      // Don't filter by workspace_id, get everything user has access to
     } else if (workspaceId) {
       query = query.eq("workspace_id", workspaceId);
     } else {
-      // Personal Workspace: owner files with NO workspace_id
       query = query.is("workspace_id", null).eq("owner_id", user.id);
     }
 
     const { data, error } = await query;
+    if (!error) return data;
 
-    if (error) throw error;
-    return data;
+    // Fallback
+    let baseQuery = supabase
+      .from("spreadsheets")
+      .select("*")
+      .order("updated_at", { ascending: false });
+
+    if (workspaceId === "all") {
+    } else if (workspaceId) {
+      baseQuery = baseQuery.eq("workspace_id", workspaceId);
+    } else {
+      baseQuery = baseQuery.is("workspace_id", null).eq("owner_id", user.id);
+    }
+
+    const { data: sheets } = await baseQuery;
+    if (sheets && sheets.length > 0) {
+      const ownerIds = (sheets as any[]).map(s => s.owner_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url")
+        .in("id", ownerIds);
+
+      return (sheets as any[]).map(s => ({
+        ...s,
+        profiles: profiles?.find(p => p.id === s.owner_id) || null
+      }));
+    }
+    return sheets || [];
   },
 
   async getById(id: string) {
