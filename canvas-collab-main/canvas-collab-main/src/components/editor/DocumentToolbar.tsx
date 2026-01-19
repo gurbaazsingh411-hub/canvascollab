@@ -157,7 +157,7 @@ export function DocumentToolbar({ editor, fileName = "document" }: DocumentToolb
   };
 
   return (
-    <div className="floating-toolbar flex items-center gap-0.5 p-1">
+    <div className="floating-toolbar flex items-center gap-0.5 p-1 overflow-x-auto lg:overflow-x-visible scrollbar-none w-full lg:w-auto">
       {/* History */}
       <ToolbarButton
         icon={Undo}

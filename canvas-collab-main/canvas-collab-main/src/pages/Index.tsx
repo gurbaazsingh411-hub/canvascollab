@@ -179,9 +179,9 @@ export default function Index() {
 
   return (
     <AppLayout title={currentWorkspace ? currentWorkspace.name : "My Dashboard"}>
-      <div className="p-6 space-y-8 animate-fade-in">
+      <div className="p-4 lg:p-6 space-y-6 lg:space-y-8 animate-fade-in">
         {/* Workspace Selector */}
-        <div className="flex items-center justify-between border-b border-border pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border pb-6 gap-4">
           <div className="flex items-center gap-4">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <Building className="h-5 w-5 text-primary" />
@@ -196,7 +196,7 @@ export default function Index() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select
               value={selectedWorkspaceId || "personal"}
               onValueChange={(val) => {
@@ -206,7 +206,7 @@ export default function Index() {
                 else localStorage.removeItem("last_workspace_id");
               }}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Select Workspace" />
               </SelectTrigger>
               <SelectContent>

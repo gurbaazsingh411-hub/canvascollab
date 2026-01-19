@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SpreadsheetGrid } from "@/components/spreadsheet/SpreadsheetGrid";
 import { SpreadsheetToolbar } from "@/components/spreadsheet/SpreadsheetToolbar";
+import { SpreadsheetEditor } from "@/components/spreadsheet/SpreadsheetEditor";
 import { ShareDialog } from "@/components/editor/ShareDialog";
 import { CommentSidebar } from "@/components/editor/CommentSidebar";
 import { VersionHistory } from "@/components/editor/VersionHistory";
@@ -73,25 +74,26 @@ export default function SpreadsheetPage() {
   return (
     <div className="flex h-screen flex-col bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border px-4 py-2 gap-3">
+        <div className="flex items-center gap-3 lg:gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/")}
             title="Back to Dashboard"
+            className="h-9 w-9"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
+          <div className="min-w-0">
             <input
               type="text"
               defaultValue={id === "new" ? "Untitled Spreadsheet" : (sheet?.title || "Loading...")}
-              className="bg-transparent text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary/20 rounded px-1 transition-all placeholder:text-muted-foreground/50"
+              className="bg-transparent text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary/20 rounded px-1 transition-all placeholder:text-muted-foreground/50 w-full truncate"
             />
-            <div className="flex items-center gap-3 text-xs text-muted-foreground px-1 mt-0.5">
+            <div className="flex items-center gap-2 lg:gap-3 text-[10px] sm:text-xs text-muted-foreground px-1 mt-0.5 overflow-x-auto scrollbar-none pb-1">
               {['File', 'Edit', 'View', 'Insert', 'Format', 'Data', 'Tools', 'Help'].map((item) => (
-                <span key={item} className="cursor-pointer hover:text-foreground transition-colors">
+                <span key={item} className="cursor-pointer hover:text-foreground transition-colors whitespace-nowrap">
                   {item}
                 </span>
               ))}
@@ -99,7 +101,7 @@ export default function SpreadsheetPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-auto sm:ml-0">
           <ShareDialog
             documentId={id || ""}
             documentTitle={id === "new" ? "Untitled Spreadsheet" : "Q1 Budget"}
@@ -107,11 +109,19 @@ export default function SpreadsheetPage() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="gap-2 hidden md:flex"
             onClick={() => setIsCommentSidebarOpen(!isCommentSidebarOpen)}
           >
             <MessageSquare className="h-4 w-4" />
             Comments
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setIsCommentSidebarOpen(!isCommentSidebarOpen)}
+          >
+            <MessageSquare className="h-4 w-4" />
           </Button>
 
           <DropdownMenu>
@@ -139,12 +149,12 @@ export default function SpreadsheetPage() {
         </div>
       </div>
 
-      {/* Toolbar */}
-      <SpreadsheetToolbar spreadsheetId={id || ""} onImport={handleImport} cells={cells} setCells={setCells} />
-
-      {/* Grid */}
+      {/* Editor Content */}
       <div className="flex-1 overflow-hidden relative">
-        <SpreadsheetGrid spreadsheetId={id || ""} />
+        <SpreadsheetEditor
+          spreadsheetId={id || ""}
+          onImport={handleImport}
+        />
 
         {/* Comment Sidebar */}
         <CommentSidebar

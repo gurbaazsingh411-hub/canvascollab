@@ -52,7 +52,7 @@ export function FileCard({ file, onClick, onToggleStar, onDelete }: FileCardProp
       </div>
 
       {/* Actions */}
-      <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="absolute right-2 top-2 flex items-center gap-1 lg:opacity-0 transition-opacity group-hover:opacity-100">
         <Button
           variant="ghost"
           size="icon"

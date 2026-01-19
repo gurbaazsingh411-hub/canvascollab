@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 
 interface SpreadsheetGridProps {
     spreadsheetId: string;
+    onCellSelected?: (cell: { row: number; col: number; cellKey: string; data: CellData } | null) => void;
 }
 
 interface CellData {
@@ -16,23 +17,29 @@ interface CellData {
     formula?: string;
 }
 
-export function SpreadsheetGrid({ spreadsheetId }: SpreadsheetGridProps) {
+export function SpreadsheetGrid({ spreadsheetId, onCellSelected }: SpreadsheetGridProps) {
     const { data: spreadsheetCells, isLoading } = useSpreadsheetCells(spreadsheetId);
     const updateCell = useUpdateSpreadsheetCell();
 
     const [cells, setCells] = useState<Map<string, CellData>>(new Map());
-    const [rows, setRows] = useState(50);
-    const [cols, setCols] = useState(26);
+    const [rows] = useState(100);
+    const [cols] = useState(26);
+
+    // Track selection locally for formula bar
+    const [selectedCellKey, setSelectedCellKey] = useState<string | null>(null);
 
     // Load cells from Supabase
     useEffect(() => {
         if (spreadsheetCells) {
             const cellMap = new Map<string, CellData>();
             spreadsheetCells.forEach((cell: any) => {
-                const key = `${cell.row_index},${cell.col_index}`;
+                const key = cell.cell_key;
+                if (!key) return;
+
+                const [row, col] = key.split(',').map(Number);
                 cellMap.set(key, {
-                    row: cell.row_index,
-                    col: cell.col_index,
+                    row: isNaN(row) ? 0 : row,
+                    col: isNaN(col) ? 0 : col,
                     value: cell.value || "",
                     formula: cell.formula || undefined,
                 });
@@ -42,12 +49,11 @@ export function SpreadsheetGrid({ spreadsheetId }: SpreadsheetGridProps) {
     }, [spreadsheetCells]);
 
     const getCellValue = useCallback((ref: string): string | number => {
-        // Parse cell reference like "A1"
         const match = ref.match(/^([A-Z]+)([0-9]+)$/);
         if (!match) return "";
 
-        const col = match[1].charCodeAt(0) - 65; // A=0, B=1, etc.
-        const row = parseInt(match[2]) - 1; // 1-indexed to 0-indexed
+        const col = match[1].charCodeAt(0) - 65;
+        const row = parseInt(match[2]) - 1;
 
         const key = `${row},${col}`;
         const cell = cells.get(key);
@@ -62,6 +68,7 @@ export function SpreadsheetGrid({ spreadsheetId }: SpreadsheetGridProps) {
     const handleCellChange = useCallback(async (changes: CellChange[]) => {
         const newCells = new Map(cells);
 
+        // Perform optimistic updates
         for (const change of changes) {
             const rowIdx = change.rowId as number;
             const colIdx = change.columnId as number;
@@ -71,7 +78,6 @@ export function SpreadsheetGrid({ spreadsheetId }: SpreadsheetGridProps) {
             let displayValue: string | number = newValue;
             let formula: string | undefined;
 
-            // Check if it's a formula
             if (typeof newValue === "string" && newValue.startsWith("=")) {
                 formula = newValue;
                 displayValue = evaluateFormula(newValue, getCellValue);
@@ -83,23 +89,54 @@ export function SpreadsheetGrid({ spreadsheetId }: SpreadsheetGridProps) {
                 value: displayValue,
                 formula,
             });
+        }
 
-            // Save to Supabase
+        setCells(newCells);
+
+        // Save to DB in background
+        for (const change of changes) {
+            const rowIdx = change.rowId as number;
+            const colIdx = change.columnId as number;
+            const key = `${rowIdx},${colIdx}`;
+            const cellData = newCells.get(key)!;
+
             try {
                 await updateCell.mutateAsync({
                     spreadsheet_id: spreadsheetId,
                     row_index: rowIdx,
                     col_index: colIdx,
-                    value: displayValue,
-                    formula,
+                    value: cellData.value,
+                    formula: cellData.formula,
                 });
             } catch (error) {
                 console.error("Failed to update cell:", error);
             }
         }
-
-        setCells(newCells);
     }, [cells, spreadsheetId, updateCell, getCellValue]);
+
+    const handleSelectionChanged = useCallback((selectedRanges: any) => {
+        if (selectedRanges && selectedRanges.length > 0) {
+            const range = selectedRanges[0];
+            if (range.rows.length === 1 && range.columns.length === 1) {
+                const row = range.rows[0].rowId as number;
+                const col = range.columns[0].columnId as number;
+                const key = `${row},${col}`;
+                setSelectedCellKey(key);
+
+                if (onCellSelected) {
+                    onCellSelected({
+                        row,
+                        col,
+                        cellKey: key,
+                        data: getCellData(row, col)
+                    });
+                }
+            } else {
+                setSelectedCellKey(null);
+                if (onCellSelected) onCellSelected(null);
+            }
+        }
+    }, [getCellData, onCellSelected]);
 
     // Generate columns
     const columns: Column[] = [
@@ -130,11 +167,16 @@ export function SpreadsheetGrid({ spreadsheetId }: SpreadsheetGridProps) {
                 { type: "header" as const, text: String(getRowLabel(rowIdx)) },
                 ...Array.from({ length: cols }, (_, colIdx) => {
                     const cellData = getCellData(rowIdx, colIdx);
-                    const displayValue = cellData.formula || String(cellData.value || "");
+                    // Show formula ONLY if we are technically "editing" or if that's what we want.
+                    // But ReactGrid doesn't pass editing state here.
+                    // For now, let's show the formula string so users can see what they typed,
+                    // but usually spreadsheets show the result.
+                    // We'll show the RESULT in the grid and use a formula bar for the formula.
+                    const textValue = cellData.formula || String(cellData.value || "");
 
                     return {
                         type: "text" as const,
-                        text: displayValue,
+                        text: textValue,
                     };
                 }),
             ],
@@ -150,11 +192,12 @@ export function SpreadsheetGrid({ spreadsheetId }: SpreadsheetGridProps) {
     }
 
     return (
-        <div className="h-full w-full overflow-auto">
+        <div className="h-full w-full overflow-auto scrollbar-thin">
             <ReactGrid
                 rows={gridRows}
                 columns={columns}
                 onCellsChanged={handleCellChange}
+                onSelectionChanged={handleSelectionChanged}
                 enableRangeSelection
                 enableFillHandle
                 enableRowSelection

@@ -1,4 +1,4 @@
-import { Moon, Sun, User, LogOut } from "lucide-react";
+import { Moon, Sun, User, LogOut, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,9 +18,10 @@ import { NotificationPanel } from "@/components/ui/notification-panel";
 
 interface TopBarProps {
   title?: string;
+  onMenuClick?: () => void;
 }
 
-export function TopBar({ title }: TopBarProps) {
+export function TopBar({ title, onMenuClick }: TopBarProps) {
   const { theme, setTheme } = useTheme();
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
@@ -35,20 +36,30 @@ export function TopBar({ title }: TopBarProps) {
   };
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
-      <div className="flex items-center gap-4">
+    <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4 lg:px-6">
+      <div className="flex items-center gap-2 lg:gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden"
+          onClick={onMenuClick}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
         {title && (
-          <h1 className="text-lg font-semibold text-foreground">{title}</h1>
+          <h1 className="text-base lg:text-lg font-semibold text-foreground truncate max-w-[150px] sm:max-w-[300px] md:max-w-none">
+            {title}
+          </h1>
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
         {/* Theme Toggle */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground h-9 w-9"
         >
           {theme === "dark" ? (
             <Sun className="h-5 w-5" />
@@ -65,7 +76,7 @@ export function TopBar({ title }: TopBarProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
               <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-primary text-primary-foreground">
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                   {initials}
                 </AvatarFallback>
               </Avatar>
@@ -93,9 +104,9 @@ export function TopBar({ title }: TopBarProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <NotificationPanel 
-        isOpen={showNotifications} 
-        onClose={() => setShowNotifications(false)} 
+      <NotificationPanel
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
       />
     </header>
   );

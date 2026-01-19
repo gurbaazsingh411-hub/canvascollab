@@ -70,34 +70,34 @@ export default function WorkspaceSelectionPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F8F9FC] dark:bg-[#0A0B0E] flex flex-col items-center py-16 px-6">
-            <div className="max-w-4xl w-full space-y-12">
+        <div className="min-h-screen bg-[#F8F9FC] dark:bg-[#0A0B0E] flex flex-col items-center py-8 lg:py-16 px-4 lg:px-6">
+            <div className="max-w-4xl w-full space-y-8 lg:space-y-12">
                 {/* Header */}
-                <div className="flex justify-between items-center bg-white dark:bg-[#15161A] p-6 rounded-2xl shadow-sm border border-border/40">
-                    <div className="flex items-center gap-4">
-                        <Avatar className="h-12 w-12 border-2 border-primary/20">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white dark:bg-[#15161A] p-4 lg:p-6 rounded-2xl shadow-sm border border-border/40 gap-4">
+                    <div className="flex items-center gap-3 lg:gap-4">
+                        <Avatar className="h-10 w-10 lg:h-12 lg:w-12 border-2 border-primary/20">
                             <AvatarImage src={user?.user_metadata?.avatar_url} />
                             <AvatarFallback className="bg-primary/10 text-primary font-bold">
                                 {user?.email?.[0].toUpperCase()}
                             </AvatarFallback>
                         </Avatar>
-                        <div>
-                            <h1 className="text-xl font-bold tracking-tight">Select a workspace</h1>
-                            <p className="text-sm text-muted-foreground">{user?.email}</p>
+                        <div className="min-w-0">
+                            <h1 className="text-lg lg:text-xl font-bold tracking-tight truncate">Select a workspace</h1>
+                            <p className="text-xs lg:text-sm text-muted-foreground truncate">{user?.email}</p>
                         </div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => signOut()} className="text-muted-foreground hover:text-destructive">
+                    <Button variant="ghost" size="sm" onClick={() => signOut()} className="text-muted-foreground hover:text-destructive w-full sm:w-auto justify-start sm:justify-center">
                         <LogOut className="h-4 w-4 mr-2" /> Sign Out
                     </Button>
                 </div>
 
                 {/* Search & Actions */}
-                <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Search your workspaces..."
-                            className="pl-10 h-12 bg-white dark:bg-[#15161A] border-border/40"
+                            className="pl-10 h-11 lg:h-12 bg-white dark:bg-[#15161A] border-border/40"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -105,7 +105,7 @@ export default function WorkspaceSelectionPage() {
 
                     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                         <DialogTrigger asChild>
-                            <Button size="lg" className="h-12 px-6 shadow-lg shadow-primary/20">
+                            <Button size="lg" className="h-11 lg:h-12 px-6 shadow-lg shadow-primary/20 w-full sm:w-auto">
                                 <Plus className="h-5 w-5 mr-2" /> Create Workspace
                             </Button>
                         </DialogTrigger>
