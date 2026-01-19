@@ -13,7 +13,7 @@ export async function exportToPDF(title: string, contentElement: HTMLElement) {
             scale: 2,
             useCORS: true,
             logging: false,
-        });
+        } as any);
 
         const imgData = canvas.toDataURL("image/png");
         const pdf = new jsPDF({

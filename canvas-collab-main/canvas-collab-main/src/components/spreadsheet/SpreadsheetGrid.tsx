@@ -74,8 +74,7 @@ export function SpreadsheetGrid({ spreadsheetId }: SpreadsheetGridProps) {
             // Check if it's a formula
             if (typeof newValue === "string" && newValue.startsWith("=")) {
                 formula = newValue;
-                const result = evaluateFormula(newValue, getCellValue);
-                displayValue = result.error ? `#ERROR: ${result.error}` : String(result.value ?? "");
+                displayValue = evaluateFormula(newValue, getCellValue);
             }
 
             newCells.set(key, {

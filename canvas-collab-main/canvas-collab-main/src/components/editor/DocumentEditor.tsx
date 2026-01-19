@@ -20,6 +20,11 @@ interface DocumentEditorProps {
   documentId?: string;
 }
 
+const EMPTY_DOC = {
+  type: "doc",
+  content: [{ type: "paragraph" }],
+};
+
 export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const [title, setTitle] = useState("Untitled Document");
   const [isSaving, setIsSaving] = useState(false);
@@ -63,7 +68,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       HorizontalRule,
       PageBreak,
     ],
-    content: (document?.content as any) || "",
+    content: (document?.content && (document.content as any).type === "doc" ? document.content : EMPTY_DOC) as any,
     editorProps: {
       attributes: {
         class: "prose prose-lg dark:prose-invert max-w-none focus:outline-none min-h-[600px]",
@@ -79,9 +84,10 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   useEffect(() => {
     if (document && editor) {
       setTitle(document.title);
-      if (document.content) {
-        editor.commands.setContent(document.content as any);
-      }
+      const content = (document.content && (document.content as any).type === "doc")
+        ? (document.content as any)
+        : EMPTY_DOC;
+      editor.commands.setContent(content);
     }
   }, [document, editor]);
 

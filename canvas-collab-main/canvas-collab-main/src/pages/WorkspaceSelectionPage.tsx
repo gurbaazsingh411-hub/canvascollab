@@ -6,7 +6,7 @@ import { Building, Plus, ArrowRight, LogOut, Loader2, Search } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNotifications } from "@/contexts/NotificationContext";
@@ -112,6 +112,9 @@ export default function WorkspaceSelectionPage() {
                         <DialogContent>
                             <DialogHeader>
                                 <DialogTitle>Create New Workspace</DialogTitle>
+                                <DialogDescription>
+                                    Enter a name for your new workspace to start collaborating.
+                                </DialogDescription>
                             </DialogHeader>
                             <div className="py-4 space-y-4">
                                 {!createdWorkspace ? (

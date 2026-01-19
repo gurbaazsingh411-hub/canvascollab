@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { History, X, RotateCcw, Eye } from "lucide-react";
 import { useDocumentVersions, useRestoreDocumentVersion, useSpreadsheetVersions, useRestoreSpreadsheetVersion, type DocumentVersion, type SpreadsheetVersion } from "@/hooks/use-versions";
 import { toast } from "sonner";
@@ -96,6 +96,9 @@ export function VersionHistory({ documentId, isOpen, onClose, fileType }: Versio
                             <div className="flex items-center gap-2">
                                 <History className="h-5 w-5" />
                                 <DialogTitle>Version History</DialogTitle>
+                                <DialogDescription className="sr-only">
+                                    View and restore previous versions of this {fileType}.
+                                </DialogDescription>
                             </div>
                             <Button variant="ghost" size="icon" onClick={onClose}>
                                 <X className="h-4 w-4" />
@@ -167,6 +170,9 @@ export function VersionHistory({ documentId, isOpen, onClose, fileType }: Versio
                     <DialogContent className="max-w-4xl max-h-[80vh]">
                         <DialogHeader>
                             <DialogTitle>{previewVersion.title} - Preview</DialogTitle>
+                            <DialogDescription className="sr-only">
+                                Preview the content of this version.
+                            </DialogDescription>
                         </DialogHeader>
                         <ScrollArea className="h-[500px]">
                             <div className="prose prose-lg dark:prose-invert max-w-none p-6">
