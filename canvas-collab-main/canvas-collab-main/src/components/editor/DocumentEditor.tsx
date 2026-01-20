@@ -8,7 +8,6 @@ import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import { PageBreak } from "@/lib/PageBreak";
-import { createCollaborativeCursorPlugin } from "@/lib/collaborative-cursor-plugin";
 import { DocumentToolbar } from "./DocumentToolbar";
 import { CollaboratorPresence } from "./CollaboratorPresence";
 import { useDocument, useUpdateDocument } from "@/hooks/use-files";
@@ -76,10 +75,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       TableHeader,
       TableCell,
       PageBreak,
-    ].concat(
-      // Add collaborative cursor plugin dynamically
-      collaborators.length > 0 ? [createCollaborativeCursorPlugin(collaborators) as any] : []
-    ),
+    ],
     content: (document?.content && (document.content as any).type === "doc" ? document.content : EMPTY_DOC) as any,
     editorProps: {
       attributes: {
@@ -115,17 +111,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       // Auto-save after 2 seconds of inactivity
       handleAutoSave(editor.getJSON());
     },
-    onSelectionUpdate: ({ editor }) => {
-      // Track cursor position and selection
-      if (!isConnected) return;
-
-      const { from, to } = editor.state.selection;
-      const head = editor.state.selection.head;
-
-      console.log('Cursor position:', { from, to, head });
-      updateCursor({ from, to, head });
-    },
-  }, [collaborators]); // Re-create editor when collaborators change to update plugin
+  });
 
   // Load document content when it changes (but only on initial load or document ID change)
   const previousDocIdRef = useRef<string | undefined>();
