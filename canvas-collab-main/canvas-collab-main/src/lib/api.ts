@@ -214,6 +214,16 @@ export const workspacesApi = {
   },
 
   async addMember(workspaceId: string, userId: string, role: string = 'member') {
+    // Check if user is already a member to avoid unique constraint errors
+    const { data: existing } = await supabase
+      .from("workspace_members" as any)
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existing) return existing;
+
     const { data, error } = await supabase
       .from("workspace_members" as any)
       .insert({ workspace_id: workspaceId, user_id: userId, role })
@@ -1013,4 +1023,17 @@ export const enhancedPermissionsApi = {
 
     if (error) throw error;
   },
+};
+// Profiles API
+export const profilesApi = {
+  async findByEmail(email: string) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
+  }
 };

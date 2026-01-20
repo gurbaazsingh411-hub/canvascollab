@@ -20,6 +20,8 @@ import {
 import { Share2, Copy, Check, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { supabase } from "@/integrations/supabase/client";
+import { workspacesApi, profilesApi } from "@/lib/api";
 
 interface ShareDialogProps {
     documentId: string;
@@ -38,34 +40,63 @@ export function ShareDialog({ documentId, documentTitle }: ShareDialogProps) {
         navigator.clipboard.writeText(shareLink);
         setCopied(true);
         toast.success("Link copied to clipboard");
-        
+
         // Add notification for link copied
         addNotification({
             title: "Link Copied",
             message: `Share link for "${documentTitle}" copied to clipboard`,
             type: "info",
         });
-        
+
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const handleInvite = () => {
+    const handleInvite = async () => {
         if (!email) {
             toast.error("Please enter an email address");
             return;
         }
-        // TODO: Implement invite functionality
-        console.log("Inviting", email, "as", role);
-        toast.success(`Invitation sent to ${email}`);
-        
-        // Add notification for successful invitation
-        addNotification({
-            title: "Document Shared",
-            message: `You've shared "${documentTitle}" with ${email} as ${role}.`,
-            type: "success",
-        });
-        
-        setEmail("");
+
+        try {
+            // 1. Find user by email
+            const foundUser = await profilesApi.findByEmail(email);
+
+            if (!foundUser) {
+                toast.error("User not found. They must have an account to be added.");
+                // TODO: Could trigger a workspace invite link generation here
+                return;
+            }
+
+            // 2. Get document details for workspace_id
+            const { data: doc } = await supabase
+                .from("documents")
+                .select("workspace_id")
+                .eq("id", documentId)
+                .single();
+
+            if (doc?.workspace_id) {
+                // 3. Add to workspace automatically
+                await workspacesApi.addMember(doc.workspace_id, foundUser.id, 'member');
+                console.log(`User ${email} auto-added to workspace ${doc.workspace_id}`);
+            }
+
+            // 4. Send invitation (logic for the specific document)
+            // TODO: In a full system, you'd also create document-specific permissions here
+
+            toast.success(`Invitation shared with ${email}`);
+
+            // Add notification for successful invitation
+            addNotification({
+                title: "Document Shared",
+                message: `You've shared "${documentTitle}" with ${email} as ${role}. They've been added to the workspace.`,
+                type: "success",
+            });
+
+            setEmail("");
+        } catch (error) {
+            console.error("Invite error:", error);
+            toast.error("Failed to share document");
+        }
     };
 
     return (
