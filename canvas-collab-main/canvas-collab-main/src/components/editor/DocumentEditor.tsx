@@ -38,20 +38,32 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
 
   // Real-time collaboration
   const { collaborators, isConnected, broadcastChange, updateCursor } = useCollaboration(documentId, (payload) => {
-    // Ignore remote updates if we're actively typing (within 1 second of last edit)
+    // Handle content updates
     if (payload.type === "content_update" && editor && !isLocallyEditing) {
       const currentContent = editor.getJSON();
-      // Only apply if content is actually different to avoid unnecessary updates
       if (JSON.stringify(currentContent) !== JSON.stringify(payload.content)) {
         editor.commands.setContent(payload.content, { emitUpdate: false });
       }
     }
+
+    // Handle title updates
+    if (payload.type === "title_update" && payload.title !== title) {
+      setTitle(payload.title);
+    }
   });
 
-  // Track cursor movements
+  // Track cursor movements with throttling to reduce network traffic
+  const cursorThrottleRef = useRef<NodeJS.Timeout | null>(null);
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isConnected) return;
-    updateCursor({ x: e.clientX, y: e.clientY });
+
+    // Throttle cursor updates to every 50ms
+    if (cursorThrottleRef.current) return;
+
+    cursorThrottleRef.current = setTimeout(() => {
+      updateCursor({ x: e.clientX, y: e.clientY });
+      cursorThrottleRef.current = null;
+    }, 50);
   };
 
   // Initialize Tiptap editor
@@ -164,13 +176,23 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     }
   };
 
-  const handleTitleChange = async (newTitle: string) => {
+  const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle);
+
+    // Broadcast title change to other users
+    broadcastChange({
+      type: "title_update",
+      title: newTitle,
+    });
+
+    // Debounce database save
     if (documentId && documentId !== "new") {
-      await updateDocument.mutateAsync({
-        id: documentId,
-        updates: { title: newTitle },
-      });
+      setTimeout(() => {
+        updateDocument.mutateAsync({
+          id: documentId,
+          updates: { title: newTitle },
+        });
+      }, 500);
     }
   };
 
