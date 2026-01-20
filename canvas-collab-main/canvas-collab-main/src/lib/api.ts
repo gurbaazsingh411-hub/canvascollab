@@ -402,74 +402,28 @@ export const workspacesApi = {
   },
 
   async useInviteLink(token: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("No user found");
-
     try {
-      // Check if the invite token exists and is valid
-      const { data: invite, error } = await supabase
-        .from("workspace_invites" as any)
-        .select("*, workspace:workspaces!workspace_id(id, name)")
-        .eq("invite_token", token)
-        .eq("used", false)
-        .gte("expires_at", new Date().toISOString())
-        .single();
+      // Call the secure RPC function
+      const { data, error } = await (supabase.rpc as any)('join_workspace_with_token', {
+        token_text: token
+      });
 
       if (error) {
-        if (error.code === 'PGRST116' || error.code === '42P01' || error.message.toLowerCase().includes('does not exist')) {
+        // Handle specific error messages from the PostgreSQL function
+        if (error.message.includes('Invalid or expired')) {
           throw new Error("Invalid or expired invite link");
+        }
+        if (error.message.includes('already a member')) {
+          throw new Error("You are already a member of this workspace");
         }
         throw error;
       }
 
-      if (!invite) {
-        throw new Error("Invalid or expired invite link");
-      }
-
-      // Check if user is already a member of this workspace
-      const inviteAny = invite as any;
-      const { data: existingMembership } = await supabase
-        .from("workspace_members" as any)
-        .select("id")
-        .eq("workspace_id", inviteAny.workspace_id)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (existingMembership) {
-        throw new Error("You are already a member of this workspace");
-      }
-
-      // Add the user to the workspace
-      const { error: memberError } = await supabase
-        .from("workspace_members" as any)
-        .insert({
-          workspace_id: inviteAny.workspace_id,
-          user_id: user.id,
-          role: inviteAny.role
-        });
-
-      if (memberError) throw memberError;
-
-      // Mark the invite as used
-      const { error: updateError } = await supabase
-        .from("workspace_invites" as any)
-        .update({ used: true })
-        .eq("id", inviteAny.id);
-
-      if (updateError) console.error("Error marking invite as used:", updateError);
-
-      return invite;
+      return data;
     } catch (err) {
-      // Handle any other errors that might occur, particularly network errors
-      if (err instanceof Error &&
-        (err.message.includes('does not exist') ||
-          err.message.includes('404') ||
-          err.message.includes('missing'))) {
-        console.warn('workspace_invites table does not exist:', err.message);
-        throw new Error('Invite links feature is not available: Table does not exist');
-      }
-      // Re-throw other errors
-      throw err;
+      console.error('Error using invite link:', err);
+      if (err instanceof Error) throw err;
+      throw new Error("An unexpected error occurred while joining the workspace");
     }
   }
 };
