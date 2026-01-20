@@ -35,7 +35,15 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const updateDocument = useUpdateDocument();
 
   // Real-time collaboration
-  const { collaborators, isConnected } = useCollaboration(documentId);
+  const { collaborators, isConnected, broadcastChange } = useCollaboration(documentId, (payload) => {
+    if (payload.type === "content_update" && editor && !editor.isFocused) {
+      const currentContent = editor.getJSON();
+      // Only apply if content is actually different to avoid cursor jumps
+      if (JSON.stringify(currentContent) !== JSON.stringify(payload.content)) {
+        editor.commands.setContent(payload.content, { emitUpdate: false });
+      }
+    }
+  });
 
   // Initialize Tiptap editor
   const editor = useEditor({
@@ -75,6 +83,12 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       },
     },
     onUpdate: ({ editor }) => {
+      // Broadcast change to other collaborators
+      broadcastChange({
+        type: "content_update",
+        content: editor.getJSON(),
+      });
+
       // Auto-save after 2 seconds of inactivity
       handleAutoSave(editor.getJSON());
     },

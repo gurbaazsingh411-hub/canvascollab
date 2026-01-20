@@ -10,24 +10,26 @@ export interface Collaborator {
     cursor?: { x: number; y: number };
 }
 
-export function useCollaboration(documentId: string | undefined) {
+export function useCollaboration(documentId: string | undefined, onMessage?: (payload: any) => void) {
     const { user, profile } = useAuth();
     const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
     const [isConnected, setIsConnected] = useState(false);
+    const [channel, setChannel] = useState<any>(null);
 
     useEffect(() => {
         if (!documentId || !user || documentId === "new") return;
 
         const channelName = `document:${documentId}`;
-        const channel = supabase.channel(channelName);
+        const newChannel = supabase.channel(channelName);
+        setChannel(newChannel);
 
         // Generate a random color for this user
         const userColor = `hsl(${Math.random() * 360}, 70%, 60%)`;
 
         // Track presence
-        channel
+        newChannel
             .on("presence", { event: "sync" }, () => {
-                const state = channel.presenceState();
+                const state = newChannel.presenceState();
                 const users: Collaborator[] = [];
 
                 Object.keys(state).forEach((key) => {
@@ -47,17 +49,14 @@ export function useCollaboration(documentId: string | undefined) {
 
                 setCollaborators(users);
             })
-            .on("presence", { event: "join" }, ({ key, newPresences }) => {
-                console.log("User joined:", newPresences);
-            })
-            .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
-                console.log("User left:", leftPresences);
+            .on("broadcast", { event: "change" }, ({ payload }) => {
+                if (onMessage) onMessage(payload);
             })
             .subscribe(async (status) => {
                 if (status === "SUBSCRIBED") {
                     setIsConnected(true);
                     // Track this user's presence
-                    await channel.track({
+                    await newChannel.track({
                         user_id: user.id,
                         name: profile?.display_name || user.email?.split("@")[0] || "Anonymous",
                         email: user.email,
@@ -68,18 +67,26 @@ export function useCollaboration(documentId: string | undefined) {
             });
 
         return () => {
-            channel.unsubscribe();
+            newChannel.unsubscribe();
             setIsConnected(false);
+            setChannel(null);
         };
     }, [documentId, user, profile]);
 
     const updateCursor = (position: { x: number; y: number }) => {
-        if (!documentId || !user) return;
-
-        const channel = supabase.channel(`document:${documentId}`);
+        if (!channel || !user) return;
         channel.track({
             user_id: user.id,
             cursor: position,
+        });
+    };
+
+    const broadcastChange = (payload: any) => {
+        if (!channel) return;
+        channel.send({
+            type: "broadcast",
+            event: "change",
+            payload,
         });
     };
 
@@ -87,5 +94,6 @@ export function useCollaboration(documentId: string | undefined) {
         collaborators,
         isConnected,
         updateCursor,
+        broadcastChange,
     };
 }

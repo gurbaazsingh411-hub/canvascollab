@@ -4,6 +4,7 @@ import "@silevis/reactgrid/styles.css";
 import { evaluateFormula, getColumnLabel, getRowLabel } from "@/lib/formulas";
 import { useSpreadsheetCells, useUpdateSpreadsheetCell } from "@/hooks/use-files";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SpreadsheetGridProps {
     spreadsheetId: string;
@@ -47,6 +48,46 @@ export function SpreadsheetGrid({ spreadsheetId, onCellSelected }: SpreadsheetGr
             setCells(cellMap);
         }
     }, [spreadsheetCells]);
+
+    // Real-time cell updates via CDC
+    useEffect(() => {
+        if (!spreadsheetId) return;
+
+        const channel = supabase
+            .channel('spreadsheet_changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'spreadsheet_cells',
+                    filter: `spreadsheet_id=eq.${spreadsheetId}`,
+                },
+                (payload) => {
+                    if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                        const newCell = payload.new as any;
+                        const key = newCell.cell_key;
+                        const [row, col] = key.split(',').map(Number);
+
+                        setCells((prev) => {
+                            const next = new Map(prev);
+                            next.set(key, {
+                                row: row,
+                                col: col,
+                                value: newCell.value || "",
+                                formula: newCell.formula || undefined,
+                            });
+                            return next;
+                        });
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [spreadsheetId]);
 
     const getCellValue = useCallback((ref: string): string | number => {
         const match = ref.match(/^([A-Z]+)([0-9]+)$/);
