@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
 
@@ -22,6 +22,7 @@ export function useCollaboration(documentId: string | undefined, onMessage?: (pa
     const [isConnected, setIsConnected] = useState(false);
     const [channel, setChannel] = useState<any>(null);
     const [userColor] = useState(() => `hsl(${Math.random() * 360}, 70%, 60%)`);
+    const lastUpdateRef = useRef<number>(0);
 
     useEffect(() => {
         if (!documentId || !user || documentId === "new") return;
@@ -80,6 +81,11 @@ export function useCollaboration(documentId: string | undefined, onMessage?: (pa
 
     const updateCursor = (position: CursorPosition) => {
         if (!channel || !user) return;
+
+        // Throttle updates to 100ms
+        const now = Date.now();
+        if (now - lastUpdateRef.current < 100) return;
+        lastUpdateRef.current = now;
 
         // Update presence with new cursor position
         channel.track({

@@ -91,7 +91,7 @@ function createDecorations(doc: any, collaborators: Collaborator[]) {
             decorations.push(
                 Decoration.inline(start, end, {
                     class: "collaborative-selection",
-                    style: `background-color: ${collaborator.color}33;`, // 20% opacity approximation
+                    style: `background-color: ${collaborator.color.replace('hsl', 'hsla').replace(')', ', 0.3)')};`,
                 })
             );
         }
