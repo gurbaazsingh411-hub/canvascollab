@@ -75,9 +75,15 @@ export function useCollaboration(documentId: string | undefined, onMessage?: (pa
 
     const updateCursor = (position: { x: number; y: number }) => {
         if (!channel || !user) return;
+
+        // Update presence with new cursor position
         channel.track({
             user_id: user.id,
+            name: profile?.display_name || user.email?.split("@")[0] || "Anonymous",
+            email: user.email,
+            color: channel.presenceState()[user.id]?.[0]?.color || `hsl(${Math.random() * 360}, 70%, 60%)`,
             cursor: position,
+            online_at: new Date().toISOString(),
         });
     };
 

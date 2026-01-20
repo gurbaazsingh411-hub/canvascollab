@@ -10,6 +10,7 @@ import TableHeader from "@tiptap/extension-table-header";
 import { PageBreak } from "@/lib/PageBreak";
 import { DocumentToolbar } from "./DocumentToolbar";
 import { CollaboratorPresence } from "./CollaboratorPresence";
+import { CollaborativeCursors } from "./CollaborativeCursors";
 import { useDocument, useUpdateDocument } from "@/hooks/use-files";
 import { useCollaboration } from "@/hooks/use-collaboration";
 import { Loader2 } from "lucide-react";
@@ -36,7 +37,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const broadcastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Real-time collaboration
-  const { collaborators, isConnected, broadcastChange } = useCollaboration(documentId, (payload) => {
+  const { collaborators, isConnected, broadcastChange, updateCursor } = useCollaboration(documentId, (payload) => {
     // Ignore remote updates if we're actively typing (within 1 second of last edit)
     if (payload.type === "content_update" && editor && !isLocallyEditing) {
       const currentContent = editor.getJSON();
@@ -46,6 +47,12 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       }
     }
   });
+
+  // Track cursor movements
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isConnected) return;
+    updateCursor({ x: e.clientX, y: e.clientY });
+  };
 
   // Initialize Tiptap editor
   const editor = useEditor({
@@ -176,7 +183,10 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" onMouseMove={handleMouseMove}>
+      {/* Collaborative Cursors Overlay */}
+      <CollaborativeCursors collaborators={collaborators} />
+
       {/* Toolbar */}
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/95 backdrop-blur px-4 lg:px-6 py-2 lg:py-3">
         <DocumentToolbar editor={editor} />
