@@ -76,7 +76,10 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       TableHeader,
       TableCell,
       PageBreak,
-    ],
+    ].concat(
+      // Add collaborative cursor plugin dynamically
+      collaborators.length > 0 ? [createCollaborativeCursorPlugin(collaborators) as any] : []
+    ),
     content: (document?.content && (document.content as any).type === "doc" ? document.content : EMPTY_DOC) as any,
     editorProps: {
       attributes: {
@@ -119,6 +122,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       const { from, to } = editor.state.selection;
       const head = editor.state.selection.head;
 
+      console.log('Cursor position:', { from, to, head });
       updateCursor({ from, to, head });
     },
   }, [collaborators]); // Re-create editor when collaborators change to update plugin

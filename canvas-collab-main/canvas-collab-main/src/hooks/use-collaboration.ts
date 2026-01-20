@@ -51,6 +51,7 @@ export function useCollaboration(documentId: string | undefined, onMessage?: (pa
                     });
                 });
 
+                console.log('Collaborators updated:', users);
                 setCollaborators(users);
             })
             .on("broadcast", { event: "change" }, ({ payload }) => {
