@@ -2,13 +2,11 @@ import { useEffect, useState, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import { Table } from "@tiptap/extension-table";
 import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
-import HorizontalRule from "@tiptap/extension-horizontal-rule";
 import { PageBreak } from "@/lib/PageBreak";
 import { DocumentToolbar } from "./DocumentToolbar";
 import { CollaboratorPresence } from "./CollaboratorPresence";
@@ -60,12 +58,6 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       Placeholder.configure({
         placeholder: "Start typing your document content here...",
       }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: "text-primary underline cursor-pointer",
-        },
-      }),
       Image.configure({
         HTMLAttributes: {
           class: "max-w-full h-auto rounded-lg",
@@ -77,7 +69,6 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       TableRow,
       TableHeader,
       TableCell,
-      HorizontalRule,
       PageBreak,
     ],
     content: (document?.content && (document.content as any).type === "doc" ? document.content : EMPTY_DOC) as any,
@@ -117,16 +108,18 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     },
   });
 
-  // Load document content when it changes
+  // Load document content when it changes (but only on initial load or document ID change)
+  const previousDocIdRef = useRef<string | undefined>();
   useEffect(() => {
-    if (document && editor) {
+    if (document && editor && previousDocIdRef.current !== documentId) {
+      previousDocIdRef.current = documentId;
       setTitle(document.title);
       const content = (document.content && (document.content as any).type === "doc")
         ? (document.content as any)
         : EMPTY_DOC;
-      editor.commands.setContent(content);
+      editor.commands.setContent(content, { emitUpdate: false });
     }
-  }, [document, editor]);
+  }, [document, editor, documentId]);
 
   // Auto-save debounce
   useEffect(() => {
