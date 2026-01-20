@@ -8,9 +8,9 @@ import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import { PageBreak } from "@/lib/PageBreak";
+import { createCollaborativeCursorPlugin } from "@/lib/collaborative-cursor-plugin";
 import { DocumentToolbar } from "./DocumentToolbar";
 import { CollaboratorPresence } from "./CollaboratorPresence";
-import { CollaborativeCursors } from "./CollaborativeCursors";
 import { useDocument, useUpdateDocument } from "@/hooks/use-files";
 import { useCollaboration } from "@/hooks/use-collaboration";
 import { Loader2 } from "lucide-react";
@@ -37,7 +37,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const broadcastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Real-time collaboration
-  const { collaborators, isConnected, broadcastChange, updateCursor } = useCollaboration(documentId, (payload) => {
+  const { collaborators, isConnected, broadcastChange, updateCursor, userColor } = useCollaboration(documentId, (payload) => {
     // Handle content updates
     if (payload.type === "content_update" && editor && !isLocallyEditing) {
       const currentContent = editor.getJSON();
@@ -52,21 +52,8 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     }
   });
 
-  // Track cursor movements with throttling to reduce network traffic
-  const cursorThrottleRef = useRef<NodeJS.Timeout | null>(null);
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isConnected) return;
 
-    // Throttle cursor updates to every 50ms
-    if (cursorThrottleRef.current) return;
-
-    cursorThrottleRef.current = setTimeout(() => {
-      updateCursor({ x: e.clientX, y: e.clientY });
-      cursorThrottleRef.current = null;
-    }, 50);
-  };
-
-  // Initialize Tiptap editor
+  // Initialize Tiptap editor with collaborative cursor plugin
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -125,7 +112,16 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       // Auto-save after 2 seconds of inactivity
       handleAutoSave(editor.getJSON());
     },
-  });
+    onSelectionUpdate: ({ editor }) => {
+      // Track cursor position and selection
+      if (!isConnected) return;
+
+      const { from, to } = editor.state.selection;
+      const head = editor.state.selection.head;
+
+      updateCursor({ from, to, head });
+    },
+  }, [collaborators]); // Re-create editor when collaborators change to update plugin
 
   // Load document content when it changes (but only on initial load or document ID change)
   const previousDocIdRef = useRef<string | undefined>();
@@ -205,10 +201,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   }
 
   return (
-    <div className="flex h-full flex-col" onMouseMove={handleMouseMove}>
-      {/* Collaborative Cursors Overlay */}
-      <CollaborativeCursors collaborators={collaborators} />
-
+    <div className="flex h-full flex-col">
       {/* Toolbar */}
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/95 backdrop-blur px-4 lg:px-6 py-2 lg:py-3">
         <DocumentToolbar editor={editor} />

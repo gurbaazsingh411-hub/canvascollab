@@ -2,12 +2,18 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
 
+export interface CursorPosition {
+    from: number;
+    to: number;
+    head: number;
+}
+
 export interface Collaborator {
     id: string;
     name: string;
     email: string;
     color: string;
-    cursor?: { x: number; y: number };
+    cursor?: CursorPosition;
 }
 
 export function useCollaboration(documentId: string | undefined, onMessage?: (payload: any) => void) {
@@ -15,6 +21,7 @@ export function useCollaboration(documentId: string | undefined, onMessage?: (pa
     const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
     const [isConnected, setIsConnected] = useState(false);
     const [channel, setChannel] = useState<any>(null);
+    const [userColor] = useState(() => `hsl(${Math.random() * 360}, 70%, 60%)`);
 
     useEffect(() => {
         if (!documentId || !user || documentId === "new") return;
@@ -22,9 +29,6 @@ export function useCollaboration(documentId: string | undefined, onMessage?: (pa
         const channelName = `document:${documentId}`;
         const newChannel = supabase.channel(channelName);
         setChannel(newChannel);
-
-        // Generate a random color for this user
-        const userColor = `hsl(${Math.random() * 360}, 70%, 60%)`;
 
         // Track presence
         newChannel
@@ -71,9 +75,9 @@ export function useCollaboration(documentId: string | undefined, onMessage?: (pa
             setIsConnected(false);
             setChannel(null);
         };
-    }, [documentId, user, profile]);
+    }, [documentId, user, profile, userColor]);
 
-    const updateCursor = (position: { x: number; y: number }) => {
+    const updateCursor = (position: CursorPosition) => {
         if (!channel || !user) return;
 
         // Update presence with new cursor position
@@ -81,7 +85,7 @@ export function useCollaboration(documentId: string | undefined, onMessage?: (pa
             user_id: user.id,
             name: profile?.display_name || user.email?.split("@")[0] || "Anonymous",
             email: user.email,
-            color: channel.presenceState()[user.id]?.[0]?.color || `hsl(${Math.random() * 360}, 70%, 60%)`,
+            color: userColor,
             cursor: position,
             online_at: new Date().toISOString(),
         });
@@ -101,5 +105,6 @@ export function useCollaboration(documentId: string | undefined, onMessage?: (pa
         isConnected,
         updateCursor,
         broadcastChange,
+        userColor,
     };
 }
