@@ -884,6 +884,17 @@ export const profilesApi = {
     if (error) throw error;
     return data;
   },
+
+  async findByEmail(email: string) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
+  }
 };
 
 // Comments API
@@ -1023,17 +1034,4 @@ export const enhancedPermissionsApi = {
 
     if (error) throw error;
   },
-};
-// Profiles API
-export const profilesApi = {
-  async findByEmail(email: string) {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("email", email)
-      .maybeSingle();
-
-    if (error) throw error;
-    return data;
-  }
 };
