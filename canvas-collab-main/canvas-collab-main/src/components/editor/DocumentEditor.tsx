@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -33,12 +33,16 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   // Fetch document data
   const { data: document, isLoading } = useDocument(documentId);
   const updateDocument = useUpdateDocument();
+  const [isLocallyEditing, setIsLocallyEditing] = useState(false);
+  const localEditTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const broadcastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Real-time collaboration
   const { collaborators, isConnected, broadcastChange } = useCollaboration(documentId, (payload) => {
-    if (payload.type === "content_update" && editor && !editor.isFocused) {
+    // Ignore remote updates if we're actively typing (within 1 second of last edit)
+    if (payload.type === "content_update" && editor && !isLocallyEditing) {
       const currentContent = editor.getJSON();
-      // Only apply if content is actually different to avoid cursor jumps
+      // Only apply if content is actually different to avoid unnecessary updates
       if (JSON.stringify(currentContent) !== JSON.stringify(payload.content)) {
         editor.commands.setContent(payload.content, { emitUpdate: false });
       }
@@ -83,11 +87,30 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       },
     },
     onUpdate: ({ editor }) => {
-      // Broadcast change to other collaborators
-      broadcastChange({
-        type: "content_update",
-        content: editor.getJSON(),
-      });
+      // Mark as locally editing
+      setIsLocallyEditing(true);
+
+      // Clear existing timeout
+      if (localEditTimeoutRef.current) {
+        clearTimeout(localEditTimeoutRef.current);
+      }
+
+      // Reset local editing flag after 1 second of inactivity
+      localEditTimeoutRef.current = setTimeout(() => {
+        setIsLocallyEditing(false);
+      }, 1000);
+
+      // Debounce broadcasts to reduce network traffic and race conditions
+      if (broadcastTimeoutRef.current) {
+        clearTimeout(broadcastTimeoutRef.current);
+      }
+
+      broadcastTimeoutRef.current = setTimeout(() => {
+        broadcastChange({
+          type: "content_update",
+          content: editor.getJSON(),
+        });
+      }, 300); // Broadcast after 300ms of inactivity
 
       // Auto-save after 2 seconds of inactivity
       handleAutoSave(editor.getJSON());
