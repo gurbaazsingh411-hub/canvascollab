@@ -33,8 +33,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { exportToDOCX } from "@/lib/export";
-import { printDocument, exportToPDF } from "@/lib/printing";
+import { exportToDOCX, exportToPDF, printDocument } from "@/lib/export";
 import { useToast } from "@/hooks/use-toast";
 
 interface ToolbarButtonProps {
@@ -89,7 +88,7 @@ export function DocumentToolbar({ editor, fileName = "document" }: DocumentToolb
 
   const handleExportDocx = async () => {
     try {
-      await exportToDOCX(editor.getHTML(), fileName);
+      await exportToDOCX(fileName, editor.getJSON());
       toast({
         title: "Export Successful",
         description: `Document exported as ${fileName}.docx`,
@@ -105,22 +104,12 @@ export function DocumentToolbar({ editor, fileName = "document" }: DocumentToolb
 
   const handleExportPdf = async () => {
     try {
-      // We need to get the editor content and export it to PDF
-      const editorContent = document.querySelector('.tiptap');
-      if (editorContent) {
-        await exportToPDF('tiptap', `${fileName}.pdf`);
-        toast({
-          title: "Export Successful",
-          description: `Document exported as ${fileName}.pdf`,
-        });
-      } else {
-        // Fallback to editor.getHTML() if element not found
-        await exportToDOCX(editor.getHTML(), fileName);
-        toast({
-          title: "Export Successful",
-          description: `Document exported as ${fileName}.pdf`,
-        });
-      }
+      // Direct call to exportToPDF targeting the .tiptap container
+      await exportToPDF(fileName, 'tiptap');
+      toast({
+        title: "Export Successful",
+        description: `Document exported as ${fileName}.pdf`,
+      });
     } catch (error) {
       toast({
         title: "Export Failed",
@@ -132,21 +121,11 @@ export function DocumentToolbar({ editor, fileName = "document" }: DocumentToolb
 
   const handlePrint = async () => {
     try {
-      // Get the editor content and print it
-      const editorContent = document.querySelector('.tiptap');
-      if (editorContent) {
-        printDocument('tiptap', fileName);
-        toast({
-          title: "Print Initiated",
-          description: "Document print window opened",
-        });
-      } else {
-        toast({
-          title: "Print Failed",
-          description: "Could not find document content to print",
-          variant: "destructive",
-        });
-      }
+      printDocument();
+      toast({
+        title: "Print Initiated",
+        description: "Document print window opened",
+      });
     } catch (error) {
       toast({
         title: "Print Failed",

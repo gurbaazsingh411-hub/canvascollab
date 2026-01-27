@@ -4,7 +4,7 @@ import { DocumentEditor } from "@/components/editor/DocumentEditor";
 import { ShareDialog } from "@/components/editor/ShareDialog";
 import { CommentSidebar } from "@/components/editor/CommentSidebar";
 import { VersionHistory } from "@/components/editor/VersionHistory";
-import { ArrowLeft, Download, MoreHorizontal, MessageSquare, FileText, Printer, History } from "lucide-react";
+import { ArrowLeft, MoreHorizontal, MessageSquare, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { exportToPDF, exportToDOCX } from "@/lib/export";
 import { toast } from "sonner";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useHeartbeat } from "@/hooks/use-heartbeat";
@@ -24,7 +23,6 @@ export default function DocumentPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [isCommentSidebarOpen, setIsCommentSidebarOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const { addNotification } = useNotifications();
   const { data: doc } = useDocument(id);
@@ -46,31 +44,6 @@ export default function DocumentPage() {
     } catch (error) {
       console.error("Failed to save version:", error);
       toast.error("Failed to save version");
-    }
-  };
-
-  const handleExport = async (format: 'pdf' | 'docx') => {
-    setIsExporting(true);
-    try {
-      const title = id === "new" ? "Untitled Document" : "Q4 Marketing Strategy";
-      const contentElement = document.querySelector('.document-canvas') as HTMLElement;
-
-      if (!contentElement) {
-        throw new Error("Document content not found");
-      }
-
-      if (format === 'pdf') {
-        await exportToPDF(title, contentElement);
-        toast.success("PDF exported successfully");
-      } else {
-        // For DOCX, we need the editor JSON - this will be improved when we connect to actual document data
-        toast.info("DOCX export coming soon");
-      }
-    } catch (error) {
-      console.error("Export failed:", error);
-      toast.error(`Failed to export as ${format.toUpperCase()}`);
-    } finally {
-      setIsExporting(false);
     }
   };
 
@@ -124,39 +97,11 @@ export default function DocumentPage() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 hidden sm:flex">
-                <Download className="h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('pdf')} disabled={isExporting}>
-                <FileText className="h-4 w-4 mr-2" />
-                Export as PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('docx')} disabled={isExporting}>
-                <FileText className="h-4 w-4 mr-2" />
-                Export as DOCX
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => window.print()}>
-                <Printer className="h-4 w-4 mr-2" />
-                Print
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
                 <MoreHorizontal className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem className="sm:hidden" onClick={() => handleExport('pdf')}>
-                <Download className="h-4 w-4 mr-2" />
-                Export as PDF
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleSaveVersion}>
                 <History className="h-4 w-4 mr-2" />
                 Save Version

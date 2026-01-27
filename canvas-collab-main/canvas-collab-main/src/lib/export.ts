@@ -6,13 +6,22 @@ import { saveAs } from "file-saver";
 /**
  * Export document content to PDF
  */
-export async function exportToPDF(title: string, contentElement: HTMLElement) {
+export async function exportToPDF(title: string, target: string | HTMLElement) {
     try {
+        const contentElement = typeof target === 'string' ?
+            (document.getElementById(target) || document.querySelector('.' + target)) :
+            target;
+
+        if (!contentElement) {
+            throw new Error("Export target not found");
+        }
+
         // Create canvas from content
-        const canvas = await html2canvas(contentElement, {
+        const canvas = await html2canvas(contentElement as HTMLElement, {
             scale: 2,
             useCORS: true,
             logging: false,
+            backgroundColor: "#ffffff",
         } as any);
 
         const imgData = canvas.toDataURL("image/png");
@@ -65,6 +74,7 @@ export async function exportToDOCX(title: string, editorJSON: any) {
                         new Paragraph({
                             text,
                             heading: getHeadingLevel(level),
+                            spacing: { before: 200, after: 100 }
                         })
                     );
                 } else if (node.type === "paragraph") {
@@ -78,14 +88,15 @@ export async function exportToDOCX(title: string, editorJSON: any) {
                                         bold: inline.marks?.some((m: any) => m.type === "bold"),
                                         italics: inline.marks?.some((m: any) => m.type === "italic"),
                                         strike: inline.marks?.some((m: any) => m.type === "strike"),
+                                        font: "Calibri",
+                                        size: 24, // 12pt
                                     })
                                 );
                             }
                         });
                     }
-                    paragraphs.push(new Paragraph({ children: runs }));
+                    paragraphs.push(new Paragraph({ children: runs, spacing: { after: 120 } }));
                 } else if (node.type === "bulletList" || node.type === "orderedList") {
-                    // Handle lists
                     if (node.content) {
                         node.content.forEach((listItem: any) => {
                             const text = extractText(listItem);
@@ -93,17 +104,13 @@ export async function exportToDOCX(title: string, editorJSON: any) {
                                 new Paragraph({
                                     text,
                                     bullet: node.type === "bulletList" ? { level: 0 } : undefined,
-                                    numbering: node.type === "orderedList" ? { reference: "default", level: 0 } : undefined,
+                                    numbering: node.type === "orderedList" ? { reference: "default-numbering", level: 0 } : undefined,
                                 })
                             );
                         });
                     }
                 } else if (node.type === "horizontalRule") {
-                    // Handle horizontal rules
-                    paragraphs.push(new Paragraph({ text: "────────────────────────────", thematicBreak: true }));
-                } else if (node.type === "pageBreak") {
-                    // Handle page breaks - just add some space
-                    paragraphs.push(new Paragraph({ text: "" }));
+                    paragraphs.push(new Paragraph({ text: "________________________________", thematicBreak: true }));
                 }
             });
         }
@@ -127,13 +134,13 @@ export async function exportToDOCX(title: string, editorJSON: any) {
 }
 
 /**
- * Print document
+ * Unified Print function
  */
 export function printDocument() {
     window.print();
 }
 
-// Helper functions
+// Helper functions for DOCX conversion
 function extractText(node: any): string {
     if (!node.content) return "";
     return node.content
@@ -145,15 +152,14 @@ function extractText(node: any): string {
         .join("");
 }
 
-function getHeadingLevel(level: number): typeof HeadingLevel[keyof typeof HeadingLevel] {
+function getHeadingLevel(level: number): any {
     switch (level) {
-        case 1:
-            return HeadingLevel.HEADING_1;
-        case 2:
-            return HeadingLevel.HEADING_2;
-        case 3:
-            return HeadingLevel.HEADING_3;
-        default:
-            return HeadingLevel.HEADING_1;
+        case 1: return HeadingLevel.HEADING_1;
+        case 2: return HeadingLevel.HEADING_2;
+        case 3: return HeadingLevel.HEADING_3;
+        case 4: return HeadingLevel.HEADING_4;
+        case 5: return HeadingLevel.HEADING_5;
+        case 6: return HeadingLevel.HEADING_6;
+        default: return HeadingLevel.HEADING_1;
     }
 }
