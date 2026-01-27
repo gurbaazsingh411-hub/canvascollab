@@ -209,16 +209,22 @@
 
   /* The actual sheet of paper */
   .tiptap {
-    @apply bg-card shadow-lg border border-border/40 focus:outline-none;
+    @apply bg-card focus:outline-none;
     width: 210mm;
     min-height: 297mm;
+    /* A4 Height */
     margin: 0 auto;
     padding: 25.4mm !important;
-    /* Standard 1 inch margins */
+    /* 1 inch margins */
     box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+
+    /* Strong 3D paper shadow */
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.05),
+      0 4px 8px rgba(0, 0, 0, 0.05),
+      0 8px 16px rgba(0, 0, 0, 0.08),
+      0 0 0 1px hsl(var(--border) / 0.6);
+    border-radius: 2px;
   }
 
   /* Ensure paragraphs and other blocks have consistent spacing */
@@ -227,14 +233,11 @@
   }
 
   .dark .tiptap {
-    @apply bg-card border-border/20;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-  }
-
-  /* Transparent editor content as it sits on the paper */
-  .tiptap {
-    @apply focus:outline-none bg-transparent;
-    min-height: 100%;
+    @apply bg-card;
+    box-shadow:
+      0 4px 10px rgba(0, 0, 0, 0.3),
+      0 8px 30px rgba(0, 0, 0, 0.35),
+      0 0 0 1px hsl(var(--border) / 0.3);
   }
 
   /* Visual Page numbering indicator */
@@ -242,23 +245,31 @@
     @apply fixed bottom-12 right-12 bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-full text-xs font-medium shadow-lg backdrop-blur-sm z-50;
   }
 
-  /* Physical Page Break Divider - Mimics margins + visual gap and "Desk" background */
+  /* MS Word-Style Page Break: The "gap" between two sheets of paper */
   .page-break-divider {
-    height: 60mm;
-    /* Large gap to feel like separate pages */
-    margin: 40px -25.4mm;
+    /* The height represents the visual space BETWEEN pages */
+    /* It includes the "bottom margin" of page 1 + the "gap" + the "top margin" of page 2 */
+    height: 80mm;
 
-    /* Matches .document-canvas-container desk look */
-    background: hsl(var(--muted)/0.8);
+    /* Extend to the full width of the "desk" */
+    margin-left: -25.4mm;
+    margin-right: -25.4mm;
+    margin-top: 25.4mm;
+    /* Simulate the bottom margin of the current page */
+    margin-bottom: 25.4mm;
+    /* Simulate the top margin of the next page */
+
+    /* The "desk" background shows through the gap */
+    background-color: hsl(var(--muted)/0.5);
     background-image: radial-gradient(hsl(var(--border)) 1px, transparent 1px);
     background-size: 24px 24px;
 
-    /* Shadows on the "paper edges" above and below */
+    /* 3D effect: shadows on the paper edges */
     box-shadow:
-      inset 0 10px 15px -10px rgba(0, 0, 0, 0.1),
-      inset 0 -10px 15px -10px rgba(0, 0, 0, 0.1),
-      0 1px 0 hsl(var(--border)),
-      0 -1px 0 hsl(var(--border));
+      /* Top paper's bottom edge (inset shadow at top of this element) */
+      inset 0 20px 30px -20px rgba(0, 0, 0, 0.15),
+      /* Bottom paper's top edge (inset shadow at bottom of this element) */
+      inset 0 -20px 30px -20px rgba(0, 0, 0, 0.15);
 
     position: relative;
     pointer-events: none;
@@ -266,13 +277,20 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1;
+    z-index: 0;
   }
 
-  /* Clear visual indicator in the gap */
+  .dark .page-break-divider {
+    background-color: hsl(var(--background));
+    box-shadow:
+      inset 0 20px 40px -20px rgba(0, 0, 0, 0.5),
+      inset 0 -20px 40px -20px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Visual label in the gap */
   .page-break-divider::after {
-    content: "--- SEPARATE SHEET ---";
-    @apply text-[9px] font-bold text-foreground/20 tracking-[0.4em] bg-background/80 px-4 py-1.5 rounded-full border border-border/50 shadow-sm;
+    content: "Page Break";
+    @apply text-[10px] font-medium text-muted-foreground/50 tracking-wide bg-card/80 px-3 py-1 rounded-full border border-border/60;
   }
 
   /* Spreadsheet cell */
