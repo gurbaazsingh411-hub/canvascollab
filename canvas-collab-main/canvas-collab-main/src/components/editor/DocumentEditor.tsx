@@ -11,7 +11,6 @@ import { PageBreak } from "@/lib/PageBreak";
 import { CollaborativeCursor } from "@/lib/collaborative-cursor-extension";
 import CharacterCount from "@tiptap/extension-character-count";
 import { DocumentToolbar } from "./DocumentToolbar";
-import { Ruler, type RulerLayout } from "./Ruler";
 import { CollaboratorPresence } from "./CollaboratorPresence";
 import { useDocument, useUpdateDocument } from "@/hooks/use-files";
 import { useCollaboration } from "@/hooks/use-collaboration";
@@ -35,12 +34,6 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const { data: document, isLoading } = useDocument(documentId);
   const updateDocument = useUpdateDocument();
   const [currentPage, setCurrentPage] = useState(1);
-  const [layout, setLayout] = useState<RulerLayout>({
-    leftMargin: 25,
-    rightMargin: 25,
-    firstLineIndent: 0,
-    hangingIndent: 0,
-  });
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLocallyEditing, setIsLocallyEditing] = useState(false);
   const localEditTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -245,34 +238,18 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
         <CollaboratorPresence collaborators={collaborators} />
       </div>
 
-      {/* Ruler */}
-      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur shadow-sm">
-        <Ruler onLayoutChange={setLayout} />
-      </div>
-
       {/* Editor Canvas */}
       <div
         ref={containerRef}
-        className="document-canvas-container flex-1 overflow-y-auto scrollbar-thin pt-4"
+        className="document-canvas-container flex-1 overflow-y-auto scrollbar-thin"
       >
-        <div
-          className="document-paper"
-          style={{
-            paddingLeft: `${layout.leftMargin}mm`,
-            paddingRight: `${layout.rightMargin}mm`,
-            "--first-line-indent": `${layout.firstLineIndent}mm`,
-            "--hanging-indent": `${layout.hangingIndent}mm`,
-          } as React.CSSProperties}
-        >
+        <div className="document-paper">
           {/* Title - Integrated into the paper sheet */}
           <input
             type="text"
             placeholder="Untitled Document"
             className="mb-8 w-full border-none bg-transparent text-4xl font-bold text-foreground placeholder:text-muted-foreground/30 focus:outline-none"
             value={title}
-            style={{
-              marginLeft: `calc(var(--first-line-indent) * -1)`,
-            } as React.CSSProperties}
             onChange={(e) => handleTitleChange(e.target.value)}
           />
 

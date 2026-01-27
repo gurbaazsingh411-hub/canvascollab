@@ -197,46 +197,37 @@
 
   /* Physical A4 Page Style */
   .document-paper {
-    @apply bg-card border border-border/50 transition-all mx-auto mb-12;
+    @apply bg-card shadow-floating border border-border/50 transition-all mx-auto;
     width: 210mm;
-    max-width: calc(100vw - 48px);
+    max-width: 100%;
     min-height: 297mm;
     padding: 25mm 25mm !important;
     position: relative;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 10px 30px rgba(0, 0, 0, 0.1);
 
     /* Simulate multiple pages with a background pattern */
     background: white;
     background-image: linear-gradient(to bottom,
-        transparent 296mm,
-        hsl(var(--muted)) 296mm,
-        hsl(var(--muted)) 306mm,
-        white 306mm);
-    background-size: 100% 306mm;
-    /* 297mm page + 9mm separator */
+        transparent 296.5mm,
+        hsl(var(--muted)) 296.5mm,
+        hsl(var(--muted)) 297.5mm,
+        white 297.5mm);
+    background-size: 100% 297mm;
   }
 
   .dark .document-paper {
     background: hsl(var(--card));
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 10px 30px rgba(0, 0, 0, 0.3);
     background-image: linear-gradient(to bottom,
-        transparent 296mm,
-        hsl(var(--background)) 296mm,
-        hsl(var(--background)) 306mm,
-        hsl(var(--card)) 306mm);
-    background-size: 100% 306mm;
+        transparent 296.5mm,
+        hsl(var(--background)) 296.5mm,
+        hsl(var(--background)) 297.5mm,
+        hsl(var(--card)) 297.5mm);
+    background-size: 100% 297mm;
   }
 
   /* Transparent editor content as it sits on the paper */
   .tiptap {
     @apply focus:outline-none bg-transparent;
     min-height: 100%;
-  }
-
-  .tiptap p {
-    text-indent: var(--first-line-indent, 0);
-    padding-left: var(--hanging-indent, 0);
-    margin-bottom: 0.5rem;
   }
 
   /* Visual Page numbering indicator */
@@ -246,19 +237,14 @@
 
   /* Physical Page Break Divider */
   .page-break-divider {
-    height: 16mm;
-    margin: 8mm -25mm;
-    @apply bg-muted flex items-center justify-center;
+    height: 12mm;
+    margin: 4mm -25mm;
+    background: hsl(var(--muted));
     border-top: 1px solid hsl(var(--border));
     border-bottom: 1px solid hsl(var(--border));
     position: relative;
     pointer-events: none;
     user-select: none;
-  }
-
-  .page-break-divider::after {
-    content: "PAGE BREAK";
-    @apply text-[10px] font-bold tracking-widest text-muted-foreground opacity-50;
   }
 
   /* Spreadsheet cell */
