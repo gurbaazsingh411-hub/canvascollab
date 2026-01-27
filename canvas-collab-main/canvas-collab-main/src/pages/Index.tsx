@@ -436,7 +436,7 @@ export default function Index() {
 
           {/* Right Column: Todo List */}
           <div className="h-[500px] lg:h-auto">
-            <TodoList />
+            <TodoList workspaceId={selectedWorkspaceId} />
           </div>
         </div>
 

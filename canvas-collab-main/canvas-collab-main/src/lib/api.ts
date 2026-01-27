@@ -26,16 +26,25 @@ export interface Todo {
   id: string;
   content: string;
   completed: boolean;
+  user_id: string;
+  workspace_id: string | null;
   created_at: string;
 }
 
 export const todosApi = {
-  async getAll() {
+  async getAll(workspaceId?: string) {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("todos" as any)
-        .select("*")
-        .order("created_at", { ascending: false });
+        .select("*");
+
+      if (workspaceId === "personal") {
+        query = query.is("workspace_id", null);
+      } else if (workspaceId) {
+        query = query.eq("workspace_id", workspaceId);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) {
         // If the table doesn't exist, return an empty array instead of throwing
@@ -59,7 +68,7 @@ export const todosApi = {
     }
   },
 
-  async create(content: string) {
+  async create(content: string, workspaceId?: string | null) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("No user found");
 
@@ -67,7 +76,8 @@ export const todosApi = {
       .from("todos" as any)
       .insert({
         content,
-        user_id: user.id
+        user_id: user.id,
+        workspace_id: workspaceId || null
       })
       .select()
       .single();
@@ -378,7 +388,7 @@ export const workspacesApi = {
       console.warn("Error fetching spreadsheets for analytics:", sheetsError);
     }
 
-    // Fetch user activity - handle case where table might not exist
+    // Fetch user activity
     let activity = [];
     try {
       const { data: activityData, error: activityError } = await supabase
@@ -393,11 +403,27 @@ export const workspacesApi = {
       console.warn("Activity fetch skipped:", err);
     }
 
+    // Fetch workspace todos
+    let todos = [];
+    try {
+      const { data: todoData, error: todoError } = await supabase
+        .from("todos" as any)
+        .select("*")
+        .eq("workspace_id", workspaceId);
+
+      if (!todoError) {
+        todos = todoData || [];
+      }
+    } catch (err) {
+      console.warn("Todos fetch in analytics skipped:", err);
+    }
+
     return {
       members: members || [],
       documents: docs || [],
       spreadsheets: sheets || [],
-      activity: activity
+      activity: activity,
+      todos: todos
     };
   },
 

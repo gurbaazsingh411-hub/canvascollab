@@ -7,8 +7,8 @@ import { Loader2, Plus, Trash2, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-export function TodoList() {
-    const { todos, isLoading, createTodo, toggleTodo, deleteTodo } = useTodos();
+export function TodoList({ workspaceId }: { workspaceId?: string | null }) {
+    const { todos, isLoading, createTodo, toggleTodo, deleteTodo } = useTodos(workspaceId || undefined);
     const [newTodo, setNewTodo] = useState("");
 
     const handleCreate = async () => {
@@ -32,7 +32,7 @@ export function TodoList() {
             <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                     <CheckSquare className="h-5 w-5 text-primary" />
-                    My Tasks
+                    {workspaceId ? "Workspace Tasks" : "My Tasks"}
                 </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col gap-4 overflow-hidden">

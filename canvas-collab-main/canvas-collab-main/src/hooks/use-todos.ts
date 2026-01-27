@@ -2,22 +2,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { todosApi, type Todo } from "@/lib/api";
 import { useAuth } from "./use-auth";
 
-export function useTodos() {
+export function useTodos(workspaceId?: string) {
     const { user } = useAuth();
     const queryClient = useQueryClient();
 
     const todosQuery = useQuery({
-        queryKey: ["todos"],
+        queryKey: ["todos", workspaceId],
         queryFn: async () => {
             try {
-                return await todosApi.getAll();
+                return await todosApi.getAll(workspaceId);
             } catch (error) {
                 // Silently handle the error when the todos table doesn't exist
-                // Return an empty array instead of throwing
                 if (error instanceof Error && error.message.includes('Table does not exist')) {
                     return [];
                 }
-                // Re-throw other errors
                 throw error;
             }
         },
@@ -25,7 +23,7 @@ export function useTodos() {
     });
 
     const createTodo = useMutation({
-        mutationFn: todosApi.create,
+        mutationFn: (content: string) => todosApi.create(content, workspaceId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["todos"] });
         },

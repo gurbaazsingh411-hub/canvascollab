@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useAuth } from "@/hooks/use-auth";
 import { workspacesApi } from "@/lib/api";
-import { Users, FileText, CheckSquare, Calendar } from "lucide-react";
+import { Users, FileText, CheckSquare, Calendar, Clock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface WorkspaceMemberWithDetails {
   id: string;
@@ -111,8 +112,10 @@ export default function WorkspaceAnalyticsPage() {
     if (!seconds) return "0m";
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
     if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
   };
 
   if (!hasAccess && !isLoading) {
@@ -236,27 +239,72 @@ export default function WorkspaceAnalyticsPage() {
                         </div>
                       </div>
 
-                      <div className="mt-6 pt-4 border-t grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="mt-6 pt-4 border-t grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {/* Column 1: Todos */}
                         <div>
-                          <h4 className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-1">
-                            <FileText className="h-3 w-3" /> FILE CONTRIBUTIONS
+                          <h4 className="text-[10px] font-bold text-muted-foreground mb-3 flex items-center gap-1 uppercase tracking-widest">
+                            <CheckSquare className="h-3 w-3" /> Workspace Tasks
+                          </h4>
+                          <div className="space-y-1.5">
+                            {analyticsData?.todos?.filter((t: any) => t.user_id === member.user_id).length === 0 ? (
+                              <p className="text-[10px] text-muted-foreground italic">No tasks assigned.</p>
+                            ) : (
+                              analyticsData?.todos?.filter((t: any) => t.user_id === member.user_id).slice(0, 5).map((todo: any) => (
+                                <div key={todo.id} className="flex items-center gap-2 group">
+                                  <div className={cn("h-1.5 w-1.5 rounded-full shrink-0", todo.completed ? "bg-muted-foreground/30" : "bg-primary")} />
+                                  <span className={cn("text-[11px] truncate", todo.completed ? "text-muted-foreground/50 line-through" : "text-foreground")}>
+                                    {todo.content}
+                                  </span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Column 2: File Breakdown */}
+                        <div>
+                          <h4 className="text-[10px] font-bold text-muted-foreground mb-3 flex items-center gap-1 uppercase tracking-widest">
+                            <Clock className="h-3 w-3" /> Time Distribution
                           </h4>
                           <div className="space-y-2">
-                            {analyticsData?.documents?.filter((d: any) => d.owner_id === member.user_id).slice(0, 3).map((d: any) => (
-                              <div key={d.id} className="text-xs flex justify-between p-2 bg-muted/40 rounded">
-                                <span className="truncate pr-2">{d.title}</span>
-                                <span className="text-[10px] text-muted-foreground shrink-0">{new Date(d.created_at).toLocaleDateString()}</span>
-                              </div>
-                            ))}
-                            {analyticsData?.spreadsheets?.filter((s: any) => s.owner_id === member.user_id).slice(0, 3).map((s: any) => (
-                              <div key={s.id} className="text-xs flex justify-between p-2 bg-muted/40 rounded">
-                                <span className="truncate pr-2">{s.title}</span>
-                                <span className="text-[10px] text-muted-foreground shrink-0">{new Date(s.created_at).toLocaleDateString()}</span>
-                              </div>
-                            ))}
-                            {userActivity.length === 0 && (
-                              <p className="text-[10px] text-muted-foreground italic">No recent activity tracked.</p>
+                            {userActivity.length === 0 ? (
+                              <p className="text-[10px] text-muted-foreground italic">No time records found.</p>
+                            ) : (
+                              userActivity.sort((a, b) => b.total_seconds_spent - a.total_seconds_spent).slice(0, 3).map((a: any) => {
+                                const fileName = analyticsData?.documents?.find((d: any) => d.id === a.file_id)?.title ||
+                                  analyticsData?.spreadsheets?.find((s: any) => s.id === a.file_id)?.title ||
+                                  "Deleted File";
+                                return (
+                                  <div key={a.id} className="space-y-1">
+                                    <div className="flex justify-between text-[10px]">
+                                      <span className="truncate font-medium">{fileName}</span>
+                                      <span className="text-muted-foreground">{formatTimeSpent(a.total_seconds_spent)}</span>
+                                    </div>
+                                    <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full bg-primary/60"
+                                        style={{ width: `${Math.min(100, (a.total_seconds_spent / (timeSpent || 1)) * 100)}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })
                             )}
+                          </div>
+                        </div>
+
+                        {/* Column 3: Recent Activity */}
+                        <div className="hidden lg:block">
+                          <h4 className="text-[10px] font-bold text-muted-foreground mb-3 flex items-center gap-1 uppercase tracking-widest">
+                            <Calendar className="h-3 w-3" /> Recent Activity
+                          </h4>
+                          <div className="space-y-2">
+                            {analyticsData?.documents?.filter((d: any) => d.owner_id === member.user_id).slice(0, 2).map((d: any) => (
+                              <div key={d.id} className="text-[10px] p-2 bg-muted/20 border border-border/40 rounded flex flex-col">
+                                <span className="font-medium truncate">{d.title}</span>
+                                <span className="text-[9px] text-muted-foreground">Created {new Date(d.created_at).toLocaleDateString()}</span>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </div>
