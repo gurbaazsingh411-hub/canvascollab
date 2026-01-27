@@ -197,31 +197,37 @@
 
   /* Physical A4 Page Style */
   .document-paper {
-    @apply bg-card shadow-floating border border-border/50 transition-all mx-auto;
+    @apply transition-all mx-auto;
     width: 210mm;
-    max-width: 100%;
-    min-height: 297mm;
-    padding: 25mm 25mm !important;
+    max-width: calc(100vw - 40px);
+    background: transparent;
     position: relative;
-
-    /* Simulate multiple pages with a background pattern */
-    background: white;
-    background-image: linear-gradient(to bottom,
-        transparent 296.5mm,
-        hsl(var(--muted)) 296.5mm,
-        hsl(var(--muted)) 297.5mm,
-        white 297.5mm);
-    background-size: 100% 297mm;
+    box-shadow: none;
+    border: none;
+    padding: 0 !important;
   }
 
-  .dark .document-paper {
-    background: hsl(var(--card));
-    background-image: linear-gradient(to bottom,
-        transparent 296.5mm,
-        hsl(var(--background)) 296.5mm,
-        hsl(var(--background)) 297.5mm,
-        hsl(var(--card)) 297.5mm);
-    background-size: 100% 297mm;
+  /* The actual sheet of paper */
+  .tiptap {
+    @apply bg-card shadow-lg border border-border/40 focus:outline-none;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    padding: 25.4mm !important;
+    /* Standard 1 inch margins */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Ensure paragraphs and other blocks have consistent spacing */
+  .tiptap p {
+    @apply mb-4 leading-relaxed;
+  }
+
+  .dark .tiptap {
+    @apply bg-card shadow-[0_0_20px_rgba(0, 0, 0, 0.5)] border-border/20;
   }
 
   /* Transparent editor content as it sits on the paper */
@@ -235,16 +241,26 @@
     @apply fixed bottom-12 right-12 bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-full text-xs font-medium shadow-lg backdrop-blur-sm z-50;
   }
 
-  /* Physical Page Break Divider */
+  /* Physical Page Break Divider - Mimics margins + visual gap */
   .page-break-divider {
-    height: 12mm;
-    margin: 4mm -25mm;
-    background: hsl(var(--muted));
-    border-top: 1px solid hsl(var(--border));
-    border-bottom: 1px solid hsl(var(--border));
+    height: 50.8mm;
+    /* Exactly 2 inches (1in bottom margin + 1in top margin) */
+    margin: 20px -25.4mm;
+    /* The 20px here is the physical "gap" between papers */
+    @apply bg-muted/30 border-t border-b border-dashed border-border/60;
     position: relative;
     pointer-events: none;
     user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+
+  /* Clear visual indicator in the gap */
+  .page-break-divider::after {
+    content: "PAGE BREAK (1 INCH MARGINS APPLIED)";
+    @apply text-[9px] font-bold text-dark-foreground/20 tracking-[0.4em] bg-background/50 px-4 py-1 rounded-full;
   }
 
   /* Spreadsheet cell */

@@ -8,6 +8,7 @@ import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import { PageBreak } from "@/lib/PageBreak";
+import { AutoPagination } from "@/lib/AutoPagination";
 import { CollaborativeCursor } from "@/lib/collaborative-cursor-extension";
 import CharacterCount from "@tiptap/extension-character-count";
 import { DocumentToolbar } from "./DocumentToolbar";
@@ -79,6 +80,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       TableHeader,
       TableCell,
       PageBreak,
+      AutoPagination,
       CollaborativeCursor,
       CharacterCount,
     ],
