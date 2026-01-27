@@ -188,9 +188,63 @@
     @apply bg-toolbar border border-toolbar-border rounded-lg shadow-lg;
   }
 
-  /* Document canvas */
-  .document-canvas {
-    @apply bg-card shadow-sm border border-border/50 rounded-lg;
+  /* Document desk (background surface) */
+  .document-canvas-container {
+    @apply bg-muted/50 min-h-full py-8 lg:py-12 flex justify-center;
+    background-image: radial-gradient(hsl(var(--border)) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Physical A4 Page Style */
+  .document-paper {
+    @apply bg-card shadow-floating border border-border/50 transition-all mx-auto;
+    width: 210mm;
+    max-width: 100%;
+    min-height: 297mm;
+    padding: 25mm 25mm !important;
+    position: relative;
+
+    /* Simulate multiple pages with a background pattern */
+    background: white;
+    background-image: linear-gradient(to bottom,
+        transparent 296.5mm,
+        hsl(var(--muted)) 296.5mm,
+        hsl(var(--muted)) 297.5mm,
+        white 297.5mm);
+    background-size: 100% 297mm;
+  }
+
+  .dark .document-paper {
+    background: hsl(var(--card));
+    background-image: linear-gradient(to bottom,
+        transparent 296.5mm,
+        hsl(var(--background)) 296.5mm,
+        hsl(var(--background)) 297.5mm,
+        hsl(var(--card)) 297.5mm);
+    background-size: 100% 297mm;
+  }
+
+  /* Transparent editor content as it sits on the paper */
+  .tiptap {
+    @apply focus:outline-none bg-transparent;
+    min-height: 100%;
+  }
+
+  /* Visual Page numbering indicator */
+  .page-indicator-floating {
+    @apply fixed bottom-12 right-12 bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-full text-xs font-medium shadow-lg backdrop-blur-sm z-50;
+  }
+
+  /* Physical Page Break Divider */
+  .page-break-divider {
+    height: 12mm;
+    margin: 4mm -25mm;
+    background: hsl(var(--muted));
+    border-top: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border));
+    position: relative;
+    pointer-events: none;
+    user-select: none;
   }
 
   /* Spreadsheet cell */
@@ -442,7 +496,18 @@
   user-select: none;
   z-index: 10;
 }
+
 /* Editor List Styles */
-.tiptap ul { list-style-type: disc !important; padding-left: 1.5rem !important; }
-.tiptap ol { list-style-type: decimal !important; padding-left: 1.5rem !important; }
-.tiptap li p { margin: 0 !important; }
+.tiptap ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+}
+
+.tiptap ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+}
+
+.tiptap li p {
+  margin: 0 !important;
+}

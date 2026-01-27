@@ -34,9 +34,9 @@ export const PageBreak = Node.create<PageBreakOptions>({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ["hr", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+    return ["div", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
       "data-page-break": "",
-      style: "border: none; border-top: 2px dashed #ccc; margin: 20px 0; page-break-after: always; height: 1px;",
+      class: "page-break-divider",
     })];
   },
 

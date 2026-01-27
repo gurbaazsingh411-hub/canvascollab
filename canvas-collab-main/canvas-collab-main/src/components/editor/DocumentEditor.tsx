@@ -32,7 +32,8 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
 
   // Fetch document data
   const { data: document, isLoading } = useDocument(documentId);
-  const updateDocument = useUpdateDocument();
+  const [currentPage, setCurrentPage] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isLocallyEditing, setIsLocallyEditing] = useState(false);
   const localEditTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const broadcastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -122,6 +123,26 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       updateCursor({ from, to, head });
     },
   });
+
+  // Page tracking logic
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!containerRef.current) return;
+      const { scrollTop } = containerRef.current;
+      // Approximate A4 page height in pixels (297mm + gaps/margins)
+      const pageHeight = 1140;
+      const page = Math.floor((scrollTop + 50) / pageHeight) + 1;
+      setCurrentPage(page);
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener("scroll", handleScroll);
+      // Initial check
+      handleScroll();
+    }
+    return () => container?.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Update collaborators in cursor plugin without rebuilding editor
   useEffect(() => {
@@ -217,21 +238,27 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       </div>
 
       {/* Editor Canvas */}
-      <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 lg:py-8 scrollbar-thin">
-        <div className="mx-auto max-w-3xl">
-          <div className="document-canvas min-h-[800px] p-6 lg:p-12">
-            {/* Title */}
-            <input
-              type="text"
-              placeholder="Untitled Document"
-              className="mb-4 lg:mb-6 w-full border-none bg-transparent text-2xl lg:text-4xl font-bold text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-              value={title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-            />
+      <div
+        ref={containerRef}
+        className="document-canvas-container flex-1 overflow-y-auto scrollbar-thin"
+      >
+        <div className="document-paper">
+          {/* Title - Integrated into the paper sheet */}
+          <input
+            type="text"
+            placeholder="Untitled Document"
+            className="mb-8 w-full border-none bg-transparent text-4xl font-bold text-foreground placeholder:text-muted-foreground/30 focus:outline-none"
+            value={title}
+            onChange={(e) => handleTitleChange(e.target.value)}
+          />
 
-            {/* Tiptap Editor */}
-            <EditorContent editor={editor} />
-          </div>
+          {/* Tiptap Editor */}
+          <EditorContent editor={editor} />
+        </div>
+
+        {/* Page Indicator */}
+        <div className="page-indicator-floating">
+          Page {currentPage}
         </div>
       </div>
 
