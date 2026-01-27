@@ -479,7 +479,7 @@
 }
 
 .collaborative-selection {
-  background-opacity: 0.2;
+  background-color: hsla(280, 100%, 60%, 0.2);
 }
 
 .collaborative-cursor-label {

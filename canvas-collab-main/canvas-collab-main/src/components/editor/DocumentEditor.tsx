@@ -32,6 +32,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
 
   // Fetch document data
   const { data: document, isLoading } = useDocument(documentId);
+  const updateDocument = useUpdateDocument();
   const [currentPage, setCurrentPage] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLocallyEditing, setIsLocallyEditing] = useState(false);
