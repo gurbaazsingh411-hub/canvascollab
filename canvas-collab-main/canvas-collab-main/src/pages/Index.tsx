@@ -45,6 +45,24 @@ export default function Index() {
   const [createdWorkspace, setCreatedWorkspace] = useState<any>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
 
+  // Workspace members and role checking for file grouping
+  const [workspaceMembers, setWorkspaceMembers] = useState<any[]>([]);
+  const currentWorkspace = workspaces?.find(w => w.id === selectedWorkspaceId);
+  const isWorkspaceOwner = currentWorkspace?.owner_id === user?.id;
+  const isWorkspaceAdmin = workspaceMembers.find(m => m.user_id === user?.id)?.role === 'admin';
+  const canSeeAllFiles = isWorkspaceOwner || isWorkspaceAdmin;
+
+  // Fetch workspace members for file grouping
+  useEffect(() => {
+    if (selectedWorkspaceId && canSeeAllFiles) {
+      workspacesApi.getMembers(selectedWorkspaceId).then((members: any) => {
+        setWorkspaceMembers(members || []);
+      }).catch(err => console.error("Failed to fetch members:", err));
+    } else {
+      setWorkspaceMembers([]);
+    }
+  }, [selectedWorkspaceId, isWorkspaceOwner]);
+
   const handleCreateWorkspace = async () => {
     if (!newWorkspaceName.trim() || !user) return;
     try {
@@ -175,7 +193,6 @@ export default function Index() {
     navigate(`/spreadsheet/${sheet.id}`);
   };
 
-  const currentWorkspace = workspaces?.find(w => w.id === selectedWorkspaceId);
 
   return (
     <AppLayout title={currentWorkspace ? currentWorkspace.name : "My Dashboard"}>
@@ -397,23 +414,85 @@ export default function Index() {
                   />
                 </div>
               ) : viewMode === "grid" ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {recentFiles.map((file) => (
-                    <FileCard
-                      key={file.id}
-                      file={{
-                        id: file.id,
-                        title: file.title,
-                        type: file.type,
-                        updatedAt: new Date(file.updated_at),
-                        starred: file.starred || false,
-                      }}
-                      onClick={() => handleFileClick(file)}
-                      onToggleStar={() => toggleStar.mutate({ id: file.id, type: file.type, starred: !file.starred })}
-                      onDelete={() => handleDeleteFile(file.id, file.type, file.title)}
-                    />
-                  ))}
-                </div>
+                <>
+                  {/* Grouped view for Owner/Admin */}
+                  {canSeeAllFiles && selectedWorkspaceId ? (
+                    <div className="space-y-8">
+                      {/* My Files */}
+                      <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">My Files</h3>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {recentFiles.filter(f => (f as any).owner_id === user?.id).map((file) => (
+                            <FileCard
+                              key={file.id}
+                              file={{
+                                id: file.id,
+                                title: file.title,
+                                type: file.type,
+                                updatedAt: new Date(file.updated_at),
+                                starred: file.starred || false,
+                              }}
+                              onClick={() => handleFileClick(file)}
+                              onToggleStar={() => toggleStar.mutate({ id: file.id, type: file.type, starred: !file.starred })}
+                              onDelete={() => handleDeleteFile(file.id, file.type, file.title)}
+                            />
+                          ))}
+                          {recentFiles.filter(f => (f as any).owner_id === user?.id).length === 0 && (
+                            <p className="text-sm text-muted-foreground italic">No files created by you.</p>
+                          )}
+                        </div>
+                      </div>
+                      {/* Files by other members */}
+                      {workspaceMembers.filter(m => m.user_id !== user?.id).map(member => {
+                        const memberFiles = recentFiles.filter(f => (f as any).owner_id === member.user_id);
+                        if (memberFiles.length === 0) return null;
+                        return (
+                          <div key={member.id}>
+                            <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
+                              Files by {member.profiles?.display_name || member.profiles?.email || 'Unknown'}
+                            </h3>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              {memberFiles.map((file) => (
+                                <FileCard
+                                  key={file.id}
+                                  file={{
+                                    id: file.id,
+                                    title: file.title,
+                                    type: file.type,
+                                    updatedAt: new Date(file.updated_at),
+                                    starred: file.starred || false,
+                                  }}
+                                  onClick={() => handleFileClick(file)}
+                                  onToggleStar={() => toggleStar.mutate({ id: file.id, type: file.type, starred: !file.starred })}
+                                  onDelete={() => handleDeleteFile(file.id, file.type, file.title)}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* Regular flat view for members or personal workspace */
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {recentFiles.map((file) => (
+                        <FileCard
+                          key={file.id}
+                          file={{
+                            id: file.id,
+                            title: file.title,
+                            type: file.type,
+                            updatedAt: new Date(file.updated_at),
+                            starred: file.starred || false,
+                          }}
+                          onClick={() => handleFileClick(file)}
+                          onToggleStar={() => toggleStar.mutate({ id: file.id, type: file.type, starred: !file.starred })}
+                          onDelete={() => handleDeleteFile(file.id, file.type, file.title)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="space-y-2">
                   {recentFiles.map((file) => (
