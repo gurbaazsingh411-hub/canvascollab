@@ -242,13 +242,24 @@
     @apply fixed bottom-12 right-12 bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-full text-xs font-medium shadow-lg backdrop-blur-sm z-50;
   }
 
-  /* Physical Page Break Divider - Mimics margins + visual gap */
+  /* Physical Page Break Divider - Mimics margins + visual gap and "Desk" background */
   .page-break-divider {
-    height: 50.8mm;
-    /* Exactly 2 inches (1in bottom margin + 1in top margin) */
-    margin: 20px -25.4mm;
-    /* The 20px here is the physical "gap" between papers */
-    @apply bg-muted/30 border-t border-b border-dashed border-border/60;
+    height: 60mm;
+    /* Large gap to feel like separate pages */
+    margin: 40px -25.4mm;
+
+    /* Matches .document-canvas-container desk look */
+    background: hsl(var(--muted)/0.8);
+    background-image: radial-gradient(hsl(var(--border)) 1px, transparent 1px);
+    background-size: 24px 24px;
+
+    /* Shadows on the "paper edges" above and below */
+    box-shadow:
+      inset 0 10px 15px -10px rgba(0, 0, 0, 0.1),
+      inset 0 -10px 15px -10px rgba(0, 0, 0, 0.1),
+      0 1px 0 hsl(var(--border)),
+      0 -1px 0 hsl(var(--border));
+
     position: relative;
     pointer-events: none;
     user-select: none;
@@ -260,8 +271,8 @@
 
   /* Clear visual indicator in the gap */
   .page-break-divider::after {
-    content: "PAGE BREAK (1 INCH MARGINS APPLIED)";
-    @apply text-[9px] font-bold text-foreground/20 tracking-[0.4em] bg-background/50 px-4 py-1 rounded-full;
+    content: "--- SEPARATE SHEET ---";
+    @apply text-[9px] font-bold text-foreground/20 tracking-[0.4em] bg-background/80 px-4 py-1.5 rounded-full border border-border/50 shadow-sm;
   }
 
   /* Spreadsheet cell */

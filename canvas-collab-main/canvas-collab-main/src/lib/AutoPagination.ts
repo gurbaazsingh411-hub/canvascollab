@@ -47,8 +47,9 @@ export const AutoPagination = Extension.create({
                 const cursorDepthInSheet = coords.bottom - sheetTop;
                 const remainingSpace = PAGE_HEIGHT_PX - cursorDepthInSheet;
 
-                // Threshold for auto-breaking: less than 1.5 inch (margins + 1 line)
-                if (remainingSpace < (BOTTOM_MARGIN_PX + 40)) {
+                // Threshold for auto-breaking: 1.5 inches (approx 144px) 
+                // to handle the 1-inch bottom margin + a bit of buffer
+                if (remainingSpace < mmToPx(38.1)) {
                     // Prevent multiple breaks if one already exists immediately after
                     const nodeAfter = $from.nodeAfter;
                     if (nodeAfter?.type.name === 'pageBreak') {

@@ -65,6 +65,13 @@ export default function WorkspaceAnalyticsPage() {
       setIsLoading(true);
       try {
         const data = await workspacesApi.getAnalytics(id);
+        console.log("Analytics Diagnostic:", {
+          memberCount: data.members?.length,
+          docCount: data.documents?.length,
+          sheetCount: data.spreadsheets?.length,
+          activityCount: data.activity?.length,
+          todoCount: data.todos?.length
+        });
         setAnalyticsData(data);
       } catch (error) {
         console.error("Error fetching analytics data:", error);
