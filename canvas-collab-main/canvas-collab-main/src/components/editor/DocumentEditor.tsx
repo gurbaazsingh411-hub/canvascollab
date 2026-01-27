@@ -9,6 +9,7 @@ import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import { PageBreak } from "@/lib/PageBreak";
 import { CollaborativeCursor } from "@/lib/collaborative-cursor-extension";
+import CharacterCount from "@tiptap/extension-character-count";
 import { DocumentToolbar } from "./DocumentToolbar";
 import { CollaboratorPresence } from "./CollaboratorPresence";
 import { useDocument, useUpdateDocument } from "@/hooks/use-files";
@@ -77,6 +78,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       TableCell,
       PageBreak,
       CollaborativeCursor,
+      CharacterCount,
     ],
     content: (document?.content && (document.content as any).type === "doc" ? document.content : EMPTY_DOC) as any,
     editorProps: {

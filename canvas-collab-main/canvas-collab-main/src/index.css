@@ -442,3 +442,7 @@
   user-select: none;
   z-index: 10;
 }
+/* Editor List Styles */
+.tiptap ul { list-style-type: disc !important; padding-left: 1.5rem !important; }
+.tiptap ol { list-style-type: decimal !important; padding-left: 1.5rem !important; }
+.tiptap li p { margin: 0 !important; }
