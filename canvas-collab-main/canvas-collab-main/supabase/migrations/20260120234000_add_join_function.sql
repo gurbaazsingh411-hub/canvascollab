@@ -10,6 +10,7 @@ SET search_path = public
 AS $$
 DECLARE
     invite_record RECORD;
+    workspace_record RECORD;
     new_member_record RECORD;
     current_user_id UUID;
 BEGIN
@@ -19,19 +20,28 @@ BEGIN
         RAISE EXCEPTION 'Not authenticated';
     END IF;
 
-    -- 2. Find and validate the invite
+    -- 2. Find the invite
     SELECT * INTO invite_record
     FROM workspace_invites
     WHERE invite_token = token_text
-      AND used = FALSE
-      AND expires_at > NOW()
-    FOR UPDATE; -- Lock the row to prevent race conditions
+    FOR UPDATE;
 
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Invalid or expired invite link';
+    -- 3. Validate existence
+    IF invite_record IS NULL THEN
+        RAISE EXCEPTION 'Invalid invite link (token not found)';
     END IF;
 
-    -- 3. Check if user is already a member
+    -- 4. Check if used
+    IF invite_record.used = TRUE THEN
+        RAISE EXCEPTION 'This invite link has already been used';
+    END IF;
+
+    -- 5. Check expiry
+    IF invite_record.expires_at < NOW() THEN
+        RAISE EXCEPTION 'This invite link has expired';
+    END IF;
+
+    -- 6. Check if user is already a member
     IF EXISTS (
         SELECT 1 FROM workspace_members 
         WHERE workspace_id = invite_record.workspace_id 
@@ -40,21 +50,29 @@ BEGIN
         RAISE EXCEPTION 'You are already a member of this workspace';
     END IF;
 
-    -- 4. Add the user to the workspace
+    -- 7. Get workspace details
+    SELECT * INTO workspace_record
+    FROM workspaces
+    WHERE id = invite_record.workspace_id;
+
+    -- 8. Add the user to the workspace
     INSERT INTO workspace_members (workspace_id, user_id, role)
     VALUES (invite_record.workspace_id, current_user_id, invite_record.role)
     RETURNING * INTO new_member_record;
 
-    -- 5. Mark invite as used
+    -- 9. Mark invite as used
     UPDATE workspace_invites
     SET used = TRUE
     WHERE id = invite_record.id;
 
-    -- 6. Return the workspace details or success
+    -- 10. Return success with details
     RETURN json_build_object(
         'success', TRUE,
         'workspace_id', invite_record.workspace_id,
-        'role', invite_record.role
+        'role', invite_record.role,
+        'workspace', json_build_object(
+            'name', workspace_record.name
+        )
     );
 END;
 $$;

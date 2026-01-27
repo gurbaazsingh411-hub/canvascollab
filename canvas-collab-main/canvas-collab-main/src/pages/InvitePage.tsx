@@ -52,11 +52,16 @@ export default function InvitePage() {
 
     try {
       const inviteData = await workspacesApi.useInviteLink(token);
+      console.log('Invite join response:', inviteData);
+
       const inviteDataAny = inviteData as any;
-      setWorkspaceName(inviteDataAny.workspace.name);
+      if (inviteDataAny?.workspace?.name) {
+        setWorkspaceName(inviteDataAny.workspace.name);
+      }
+
       addNotification({
         title: "Joined Workspace",
-        message: `You are now a member of ${inviteDataAny.workspace.name}`,
+        message: `You are now a member of ${inviteDataAny?.workspace?.name || 'the workspace'}`,
         type: "success",
       });
       setStatus("success");

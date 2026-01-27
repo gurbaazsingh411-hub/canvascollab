@@ -409,14 +409,8 @@ export const workspacesApi = {
       });
 
       if (error) {
-        // Handle specific error messages from the PostgreSQL function
-        if (error.message.includes('Invalid or expired')) {
-          throw new Error("Invalid or expired invite link");
-        }
-        if (error.message.includes('already a member')) {
-          throw new Error("You are already a member of this workspace");
-        }
-        throw error;
+        // Propagate the specific error message from the database
+        throw new Error(error.message);
       }
 
       return data;
