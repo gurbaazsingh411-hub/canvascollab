@@ -202,7 +202,7 @@ export const workspacesApi = {
           // Return members without profiles
           return typedMembers.map(member => ({
             ...member,
-            profile: null
+            profiles: null
           }));
         }
 
@@ -211,7 +211,7 @@ export const workspacesApi = {
           const profile = profiles?.find(p => p.id === member.user_id) || null;
           return {
             ...member,
-            profile
+            profiles: profile
           };
         });
       }
