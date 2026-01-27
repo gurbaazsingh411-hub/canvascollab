@@ -16,7 +16,13 @@ export interface Collaborator {
     cursor?: CursorPosition;
 }
 
-export function useCollaboration(documentId: string | undefined, onMessage?: (payload: any) => void) {
+export type SyncPayload =
+    | { type: "content_update"; content: any }
+    | { type: "title_update"; title: string }
+    | { type: "request_state" }
+    | { type: "sync_state"; content: any; title: string };
+
+export function useCollaboration(documentId: string | undefined, onMessage?: (payload: SyncPayload) => void) {
     const { user, profile } = useAuth();
     const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
     const [isConnected, setIsConnected] = useState(false);

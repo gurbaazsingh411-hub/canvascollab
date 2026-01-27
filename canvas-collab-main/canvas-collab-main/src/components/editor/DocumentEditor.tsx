@@ -40,8 +40,35 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   const localEditTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const broadcastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Sync State Guard
+  const [isSyncedWithPeers, setIsSyncedWithPeers] = useState(false);
+  const isSyncedRef = useRef(false);
+  useEffect(() => { isSyncedRef.current = isSyncedWithPeers; }, [isSyncedWithPeers]);
+
   // Real-time collaboration
   const { collaborators, isConnected, broadcastChange, updateCursor, userColor } = useCollaboration(documentId, (payload) => {
+    // Handshake: Respond to state request
+    if (payload.type === "request_state") {
+      if (editor && !editor.isEmpty) {
+        console.log("[Collab] Received state request. Sending current state.");
+        broadcastChange({
+          type: "sync_state",
+          content: editor.getJSON(),
+          title: title
+        });
+      }
+    }
+
+    // Handshake: Receive sync state
+    if (payload.type === "sync_state") {
+      if (editor && !isSyncedWithPeers) {
+        console.log("[Collab] Received sync state. Updating local content.");
+        editor.commands.setContent(payload.content, { emitUpdate: false });
+        if (payload.title) setTitle(payload.title);
+        setIsSyncedWithPeers(true);
+      }
+    }
+
     // Handle content updates
     if (payload.type === "content_update" && editor && !isLocallyEditing) {
       const currentContent = editor.getJSON();
@@ -55,6 +82,25 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       setTitle(payload.title);
     }
   });
+
+  // Trigger Handshake on Connection
+  useEffect(() => {
+    if (isConnected) {
+      console.log("[Collab] Connected. Requesting state...");
+      broadcastChange({ type: "request_state" });
+
+      // Fallback: If no response in 1s, enable editing (assume we are first/alone)
+      const timer = setTimeout(() => {
+        if (!isSyncedRef.current) {
+          console.log("[Collab] No peer response. Enabling editing from local/DB state.");
+          setIsSyncedWithPeers(true);
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setIsSyncedWithPeers(false);
+    }
+  }, [isConnected]); // broadcastChange is stable from hook
 
 
   // Initialize Tiptap editor with collaborative cursor plugin
@@ -91,6 +137,9 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       },
     },
     onUpdate: ({ editor }) => {
+      // Guard: Prevent overwriting peers with blank state before sync
+      if (!isSyncedRef.current) return;
+
       // Mark as locally editing
       setIsLocallyEditing(true);
 
