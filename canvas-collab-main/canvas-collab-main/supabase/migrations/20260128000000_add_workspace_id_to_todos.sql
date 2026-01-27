@@ -1,5 +1,5 @@
--- Add workspace_id to todos table
-ALTER TABLE todos ADD COLUMN workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE;
+-- Add workspace_id to todos table (idempotent)
+ALTER TABLE todos ADD COLUMN IF NOT EXISTS workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE;
 
 -- Create index for performance
 CREATE INDEX IF NOT EXISTS idx_todos_workspace ON todos(workspace_id);
@@ -8,19 +8,11 @@ CREATE INDEX IF NOT EXISTS idx_todos_workspace ON todos(workspace_id);
 -- Existing policy: "Users can manage their own todos"
 
 -- Enable SELECT for workspace admins/owners
+DROP POLICY IF EXISTS "Admins can view workspace todos" ON todos;
 CREATE POLICY "Admins can view workspace todos" ON todos
   FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1 FROM workspace_members
-      WHERE workspace_id = todos.workspace_id
-      AND user_id = auth.uid()
-      AND role IN ('admin', 'owner')
-    )
+    public.user_is_workspace_owner(workspace_id, auth.uid())
     OR
-    EXISTS (
-      SELECT 1 FROM workspaces
-      WHERE id = todos.workspace_id
-      AND owner_id = auth.uid()
-    )
+    public.user_is_workspace_admin(workspace_id, auth.uid())
   );
