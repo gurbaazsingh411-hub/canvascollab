@@ -227,7 +227,8 @@
   }
 
   .dark .tiptap {
-    @apply bg-card shadow-[0_0_20px_rgba(0, 0, 0, 0.5)] border-border/20;
+    @apply bg-card border-border/20;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
   }
 
   /* Transparent editor content as it sits on the paper */
@@ -260,7 +261,7 @@
   /* Clear visual indicator in the gap */
   .page-break-divider::after {
     content: "PAGE BREAK (1 INCH MARGINS APPLIED)";
-    @apply text-[9px] font-bold text-dark-foreground/20 tracking-[0.4em] bg-background/50 px-4 py-1 rounded-full;
+    @apply text-[9px] font-bold text-foreground/20 tracking-[0.4em] bg-background/50 px-4 py-1 rounded-full;
   }
 
   /* Spreadsheet cell */
