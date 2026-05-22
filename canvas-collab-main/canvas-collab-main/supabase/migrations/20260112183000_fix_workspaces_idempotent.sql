@@ -225,3 +225,4 @@ CREATE POLICY "Users can delete spreadsheets" ON spreadsheets
       )
     )
   );
+  

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { enhancedPermissionsApi, profilesApi, type DocumentRole } from "@/lib/api";
 import { useAuth } from "./use-auth";
-import { useWorkspaces } from "./use-workspaces";
+import { useWorkspaces, useWorkspaceMembers } from "./use-workspaces";
 
 export function useCollaborators(fileId: string | undefined, fileType: "document" | "spreadsheet" = "document") {
     const { user } = useAuth();
@@ -81,23 +81,32 @@ export function useUserRole(
     const { user } = useAuth();
     const { data: collaborators, isLoading: isLoadingCollabs } = useCollaborators(fileId, fileType);
     const { workspaces, isLoading: isLoadingWorkspaces } = useWorkspaces();
+    const { members: workspaceMembers, isLoading: isLoadingMembers } = useWorkspaceMembers(workspaceId || null);
 
     if (!user || !fileId || fileId === "new") {
         return { role: "owner" as const, isEditable: true, isLoading: false };
     }
 
-    const isLoading = isLoadingCollabs || isLoadingWorkspaces;
+    const isLoading = isLoadingCollabs || isLoadingWorkspaces || (!!workspaceId && isLoadingMembers);
 
     // 1. Owner of the file has full editing access
     if (user.id === ownerId) {
         return { role: "owner" as const, isEditable: true, isLoading };
     }
 
-    // 2. Owner of the workspace has full editing access
-    if (workspaceId && workspaces) {
-        const ws = workspaces.find((w) => w.id === workspaceId);
-        if (ws && ws.owner_id === user.id) {
-            return { role: "owner" as const, isEditable: true, isLoading };
+    // 2. Owner or Admin of the workspace has full editing access
+    if (workspaceId) {
+        if (workspaces) {
+            const ws = workspaces.find((w) => w.id === workspaceId);
+            if (ws && ws.owner_id === user.id) {
+                return { role: "owner" as const, isEditable: true, isLoading };
+            }
+        }
+        if (workspaceMembers) {
+            const member = workspaceMembers.find((m) => m.user_id === user.id);
+            if (member && member.role === "admin") {
+                return { role: "owner" as const, isEditable: true, isLoading };
+            }
         }
     }
 
