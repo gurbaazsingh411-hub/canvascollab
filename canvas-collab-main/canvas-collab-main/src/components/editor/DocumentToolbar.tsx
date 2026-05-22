@@ -70,9 +70,10 @@ function ToolbarButton({ icon: Icon, label, active, onClick, disabled }: Toolbar
 interface DocumentToolbarProps {
   editor: Editor | null;
   fileName?: string;
+  disabled?: boolean;
 }
 
-export function DocumentToolbar({ editor, fileName = "document" }: DocumentToolbarProps) {
+export function DocumentToolbar({ editor, fileName = "document", disabled = false }: DocumentToolbarProps) {
   if (!editor) {
     return null;
   }
@@ -142,13 +143,13 @@ export function DocumentToolbar({ editor, fileName = "document" }: DocumentToolb
         icon={Undo}
         label="Undo (⌘Z)"
         onClick={() => editor.chain().focus().undo().run()}
-        disabled={!editor.can().undo()}
+        disabled={disabled || !editor.can().undo()}
       />
       <ToolbarButton
         icon={Redo}
         label="Redo (⌘⇧Z)"
         onClick={() => editor.chain().focus().redo().run()}
-        disabled={!editor.can().redo()}
+        disabled={disabled || !editor.can().redo()}
       />
 
       <Separator orientation="vertical" className="mx-1 h-6" />
@@ -159,18 +160,21 @@ export function DocumentToolbar({ editor, fileName = "document" }: DocumentToolb
         label="Heading 1"
         active={editor.isActive("heading", { level: 1 })}
         onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+        disabled={disabled}
       />
       <ToolbarButton
         icon={Heading2}
         label="Heading 2"
         active={editor.isActive("heading", { level: 2 })}
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        disabled={disabled}
       />
       <ToolbarButton
         icon={Heading3}
         label="Heading 3"
         active={editor.isActive("heading", { level: 3 })}
         onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+        disabled={disabled}
       />
 
       <Separator orientation="vertical" className="mx-1 h-6" />
@@ -181,24 +185,28 @@ export function DocumentToolbar({ editor, fileName = "document" }: DocumentToolb
         label="Bold (⌘B)"
         active={editor.isActive("bold")}
         onClick={() => editor.chain().focus().toggleBold().run()}
+        disabled={disabled}
       />
       <ToolbarButton
         icon={Italic}
         label="Italic (⌘I)"
         active={editor.isActive("italic")}
         onClick={() => editor.chain().focus().toggleItalic().run()}
+        disabled={disabled}
       />
       <ToolbarButton
         icon={Strikethrough}
         label="Strikethrough"
         active={editor.isActive("strike")}
         onClick={() => editor.chain().focus().toggleStrike().run()}
+        disabled={disabled}
       />
       <ToolbarButton
         icon={Code}
         label="Inline Code"
         active={editor.isActive("code")}
         onClick={() => editor.chain().focus().toggleCode().run()}
+        disabled={disabled}
       />
 
       <Separator orientation="vertical" className="mx-1 h-6" />
@@ -209,12 +217,14 @@ export function DocumentToolbar({ editor, fileName = "document" }: DocumentToolb
         label="Bullet List"
         active={editor.isActive("bulletList")}
         onClick={() => editor.chain().focus().toggleBulletList().run()}
+        disabled={disabled}
       />
       <ToolbarButton
         icon={ListOrdered}
         label="Numbered List"
         active={editor.isActive("orderedList")}
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        disabled={disabled}
       />
 
       <Separator orientation="vertical" className="mx-1 h-6" />
@@ -225,17 +235,20 @@ export function DocumentToolbar({ editor, fileName = "document" }: DocumentToolb
         label="Insert Link"
         active={editor.isActive("link")}
         onClick={setLink}
+        disabled={disabled}
       />
       <ToolbarButton
         icon={Quote}
         label="Block Quote"
         active={editor.isActive("blockquote")}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
+        disabled={disabled}
       />
       <ToolbarButton
         icon={Minus}
         label="Horizontal Rule"
         onClick={() => editor.chain().focus().setHorizontalRule().run()}
+        disabled={disabled}
       />
       <ToolbarButton
         icon={SquareSplitVertical}
@@ -244,6 +257,7 @@ export function DocumentToolbar({ editor, fileName = "document" }: DocumentToolb
           // Insert page break
           editor.chain().focus().setPageBreak().run();
         }}
+        disabled={disabled}
       />
 
       <Separator orientation="vertical" className="mx-1 h-6" />

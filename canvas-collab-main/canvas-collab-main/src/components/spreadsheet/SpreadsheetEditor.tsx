@@ -3,13 +3,22 @@ import { SpreadsheetToolbar } from "./SpreadsheetToolbar";
 import { SpreadsheetGrid } from "./SpreadsheetGrid";
 import { CollaboratorPresence } from "../editor/CollaboratorPresence";
 import { getColumnLabel } from "@/lib/formulas";
+import { Lock } from "lucide-react";
+import { type Collaborator } from "@/hooks/use-collaboration";
 
 interface SpreadsheetEditorProps {
   spreadsheetId: string;
   onImport?: (data: any[][]) => void;
+  isEditable?: boolean;
+  collaborators?: Collaborator[];
 }
 
-export function SpreadsheetEditor({ spreadsheetId, onImport }: SpreadsheetEditorProps) {
+export function SpreadsheetEditor({
+  spreadsheetId,
+  onImport,
+  isEditable = true,
+  collaborators = [],
+}: SpreadsheetEditorProps) {
   const [selectedCell, setSelectedCell] = useState<{
     row: number;
     col: number;
@@ -17,11 +26,6 @@ export function SpreadsheetEditor({ spreadsheetId, onImport }: SpreadsheetEditor
     label: string;
     data: any;
   } | null>(null);
-
-  // Mock collaborators for demo
-  const collaborators = [
-    { id: "1", name: "Charlie Davis", color: "hsl(30, 100%, 55%)" },
-  ];
 
   const handleCellSelected = useCallback((cell: any) => {
     if (cell) {
@@ -46,6 +50,7 @@ export function SpreadsheetEditor({ spreadsheetId, onImport }: SpreadsheetEditor
           onImport={onImport}
           cells={cells}
           setCells={setCells}
+          disabled={!isEditable}
         />
         <div className="hidden sm:block px-2">
           <CollaboratorPresence collaborators={collaborators} />
@@ -54,7 +59,8 @@ export function SpreadsheetEditor({ spreadsheetId, onImport }: SpreadsheetEditor
 
       {/* Formula Bar */}
       <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-3 lg:px-4 py-2 shrink-0">
-        <div className="flex h-7 min-w-[50px] sm:min-w-[60px] items-center justify-center rounded border border-border bg-background px-1 sm:px-2 text-xs sm:text-sm font-medium">
+        <div className="flex h-7 min-w-[50px] sm:min-w-[60px] items-center justify-center rounded border border-border bg-background px-1 sm:px-2 text-xs sm:text-sm font-medium text-muted-foreground">
+          {!isEditable && <Lock className="h-3 w-3 mr-1 shrink-0 text-muted-foreground/60" />}
           {selectedCell?.label || ""}
         </div>
         <div className="flex-1">
@@ -69,6 +75,7 @@ export function SpreadsheetEditor({ spreadsheetId, onImport }: SpreadsheetEditor
         <SpreadsheetGrid
           spreadsheetId={spreadsheetId}
           onCellSelected={handleCellSelected}
+          isEditable={isEditable}
         />
       </div>
 

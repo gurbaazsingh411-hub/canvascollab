@@ -15,6 +15,7 @@ import { DocumentToolbar } from "./DocumentToolbar";
 import { CollaboratorPresence } from "./CollaboratorPresence";
 import { useDocument, useUpdateDocument } from "@/hooks/use-files";
 import { useCollaboration } from "@/hooks/use-collaboration";
+import { useUserRole } from "@/hooks/use-permissions";
 import { Loader2 } from "lucide-react";
 
 interface DocumentEditorProps {
@@ -34,6 +35,14 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   // Fetch document data
   const { data: document, isLoading } = useDocument(documentId);
   const updateDocument = useUpdateDocument();
+
+  const { role, isEditable, isLoading: isLoadingRole } = useUserRole(
+    documentId,
+    "document",
+    document?.owner_id,
+    document?.workspace_id
+  );
+
   const [currentPage, setCurrentPage] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLocallyEditing, setIsLocallyEditing] = useState(false);
@@ -82,6 +91,19 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       setTitle(payload.title);
     }
   });
+
+  // Refs to avoid stale closures in Tiptap callbacks
+  const isEditableRef = useRef(isEditable);
+  const broadcastChangeRef = useRef(broadcastChange);
+  const updateCursorRef = useRef(updateCursor);
+  const isConnectedRef = useRef(isConnected);
+
+  useEffect(() => {
+    isEditableRef.current = isEditable;
+    broadcastChangeRef.current = broadcastChange;
+    updateCursorRef.current = updateCursor;
+    isConnectedRef.current = isConnected;
+  }, [isEditable, broadcastChange, updateCursor, isConnected]);
 
   // Trigger Handshake on Connection
   useEffect(() => {
@@ -137,6 +159,9 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       },
     },
     onUpdate: ({ editor }) => {
+      // Guard: If not editable, do not save or broadcast
+      if (!isEditableRef.current) return;
+
       // Guard: Prevent overwriting peers with blank state before sync
       if (!isSyncedRef.current) return;
 
@@ -159,7 +184,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
       }
 
       broadcastTimeoutRef.current = setTimeout(() => {
-        broadcastChange({
+        broadcastChangeRef.current({
           type: "content_update",
           content: editor.getJSON(),
         });
@@ -170,11 +195,18 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     },
     onSelectionUpdate: ({ editor }) => {
       // Track cursor position and selection
-      if (!isConnected) return;
+      if (!isConnectedRef.current) return;
       const { from, to, head } = editor.state.selection;
-      updateCursor({ from, to, head });
+      updateCursorRef.current({ from, to, head });
     },
   });
+
+  // Dynamically set editor editability based on role
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(isEditable);
+    }
+  }, [editor, isEditable]);
 
   // Page tracking logic
   useEffect(() => {
@@ -219,7 +251,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
 
   // Auto-save debounce
   useEffect(() => {
-    if (!editor || !documentId || documentId === "new") return;
+    if (!editor || !documentId || documentId === "new" || !isEditable) return;
 
     const timeoutId = setTimeout(() => {
       const content = editor.getJSON();
@@ -227,14 +259,14 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     }, 2000);
 
     return () => clearTimeout(timeoutId);
-  }, [editor?.state.doc, documentId]);
+  }, [editor?.state.doc, documentId, isEditable]);
 
   const handleAutoSave = (content: any) => {
     // Debounced save handled by useEffect
   };
 
   const saveDocument = async (content: any) => {
-    if (!documentId || documentId === "new") return;
+    if (!documentId || documentId === "new" || !isEditable) return;
 
     setIsSaving(true);
     try {
@@ -254,6 +286,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
   };
 
   const handleTitleChange = (newTitle: string) => {
+    if (!isEditable) return;
     setTitle(newTitle);
 
     // Broadcast title change to other users
@@ -273,7 +306,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingRole) {
     return (
       <div className="flex h-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -285,7 +318,7 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
     <div className="flex h-full flex-col">
       {/* Toolbar */}
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/95 backdrop-blur px-4 lg:px-6 py-2 lg:py-3">
-        <DocumentToolbar editor={editor} />
+        <DocumentToolbar editor={editor} disabled={!isEditable} />
         <CollaboratorPresence collaborators={collaborators} />
       </div>
 
@@ -299,9 +332,10 @@ export function DocumentEditor({ documentId }: DocumentEditorProps) {
           <input
             type="text"
             placeholder="Untitled Document"
-            className="mb-8 w-full border-none bg-transparent text-4xl font-bold text-foreground placeholder:text-muted-foreground/30 focus:outline-none"
+            className="mb-8 w-full border-none bg-transparent text-4xl font-bold text-foreground placeholder:text-muted-foreground/30 focus:outline-none disabled:opacity-80"
             value={title}
             onChange={(e) => handleTitleChange(e.target.value)}
+            disabled={!isEditable}
           />
 
           {/* Tiptap Editor */}

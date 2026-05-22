@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface SpreadsheetGridProps {
     spreadsheetId: string;
     onCellSelected?: (cell: { row: number; col: number; cellKey: string; data: CellData } | null) => void;
+    isEditable?: boolean;
 }
 
 interface CellData {
@@ -18,7 +19,7 @@ interface CellData {
     formula?: string;
 }
 
-export function SpreadsheetGrid({ spreadsheetId, onCellSelected }: SpreadsheetGridProps) {
+export function SpreadsheetGrid({ spreadsheetId, onCellSelected, isEditable = true }: SpreadsheetGridProps) {
     const { data: spreadsheetCells, isLoading } = useSpreadsheetCells(spreadsheetId);
     const updateCell = useUpdateSpreadsheetCell();
 
@@ -107,6 +108,7 @@ export function SpreadsheetGrid({ spreadsheetId, onCellSelected }: SpreadsheetGr
     }, [cells]);
 
     const handleCellChange = useCallback(async (changes: CellChange[]) => {
+        if (!isEditable) return;
         const newCells = new Map(cells);
 
         // Perform optimistic updates
@@ -153,7 +155,7 @@ export function SpreadsheetGrid({ spreadsheetId, onCellSelected }: SpreadsheetGr
                 console.error("Failed to update cell:", error);
             }
         }
-    }, [cells, spreadsheetId, updateCell, getCellValue]);
+    }, [cells, spreadsheetId, updateCell, getCellValue, isEditable]);
 
     const handleSelectionChanged = useCallback((selectedRanges: any) => {
         if (selectedRanges && selectedRanges.length > 0) {
@@ -218,6 +220,7 @@ export function SpreadsheetGrid({ spreadsheetId, onCellSelected }: SpreadsheetGr
                     return {
                         type: "text" as const,
                         text: textValue,
+                        nonEditable: !isEditable,
                     };
                 }),
             ],

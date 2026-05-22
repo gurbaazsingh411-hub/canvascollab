@@ -972,6 +972,16 @@ export const enhancedPermissionsApi = {
     return data;
   },
 
+  async getSpreadsheetCollaborators(spreadsheetId: string) {
+    const { data, error } = await supabase
+      .from("document_permissions")
+      .select("*, profiles!user_id(display_name, email, avatar_url)")
+      .eq("spreadsheet_id", spreadsheetId);
+
+    if (error) throw error;
+    return data;
+  },
+
   async inviteUser(invitation: {
     document_id?: string;
     spreadsheet_id?: string;

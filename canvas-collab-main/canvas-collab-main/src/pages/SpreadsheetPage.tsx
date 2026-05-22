@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { ArrowLeft, MoreHorizontal, MessageSquare, History, Share2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, MoreHorizontal, MessageSquare, History, Share2, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,8 +17,10 @@ import { CommentSidebar } from "@/components/editor/CommentSidebar";
 import { VersionHistory } from "@/components/editor/VersionHistory";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useHeartbeat } from "@/hooks/use-heartbeat";
-import { useSpreadsheet, useSpreadsheetCells } from "@/hooks/use-files";
+import { useSpreadsheet, useSpreadsheetCells, useUpdateSpreadsheet } from "@/hooks/use-files";
 import { useCreateSpreadsheetVersion } from "@/hooks/use-versions";
+import { useUserRole } from "@/hooks/use-permissions";
+import { useCollaboration } from "@/hooks/use-collaboration";
 import { toast } from "sonner";
 
 export default function SpreadsheetPage() {
@@ -28,9 +30,60 @@ export default function SpreadsheetPage() {
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [cells, setCells] = useState<Record<string, any>>({});
   const { addNotification } = useNotifications();
-  const { data: sheet } = useSpreadsheet(id);
-  const { data: spreadsheetCells } = useSpreadsheetCells(id);
+  
+  const { data: sheet, isLoading: isLoadingSheet } = useSpreadsheet(id);
+  const { data: spreadsheetCells, isLoading: isLoadingCells } = useSpreadsheetCells(id);
   const createVersion = useCreateSpreadsheetVersion();
+  const updateSpreadsheet = useUpdateSpreadsheet();
+
+  const { role, isEditable, isLoading: isLoadingRole } = useUserRole(
+    id,
+    "spreadsheet",
+    sheet?.owner_id,
+    sheet?.workspace_id
+  );
+
+  const [title, setTitle] = useState("");
+
+  const { collaborators, broadcastChange } = useCollaboration(id, (payload) => {
+    if (payload.type === "title_update" && payload.title !== title) {
+      setTitle(payload.title);
+    }
+  });
+
+  useEffect(() => {
+    if (id === "new") {
+      setTitle("Untitled Spreadsheet");
+    } else if (sheet?.title) {
+      setTitle(sheet.title);
+    }
+  }, [sheet?.title, id]);
+
+  const handleTitleChange = (newTitle: string) => {
+    if (!isEditable) return;
+    setTitle(newTitle);
+    
+    // Broadcast the change in real-time
+    broadcastChange({
+      type: "title_update",
+      title: newTitle,
+    });
+  };
+
+  useEffect(() => {
+    if (!id || id === "new" || !isEditable || !title) return;
+    
+    const handler = setTimeout(() => {
+      if (title !== sheet?.title) {
+        updateSpreadsheet.mutate({
+          id,
+          updates: { title },
+        });
+      }
+    }, 1000);
+
+    return () => clearTimeout(handler);
+  }, [title, id, isEditable, sheet?.title]);
 
   // Track activity
   useHeartbeat(sheet?.workspace_id, id, "spreadsheet");
@@ -71,6 +124,36 @@ export default function SpreadsheetPage() {
     });
   };
 
+  const isLoading = isLoadingSheet || (id !== "new" && isLoadingCells) || isLoadingRole;
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (id !== "new" && !sheet) {
+    return (
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-background px-4">
+        <div className="glass-card flex max-w-md flex-col items-center p-8 text-center rounded-2xl">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 text-destructive mb-6">
+            <Lock className="h-8 w-8" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            You don't have permission to access this spreadsheet or it does not exist. Please ask the owner to share it with you.
+          </p>
+          <Button onClick={() => navigate("/")} className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen flex-col bg-background">
       {/* Header */}
@@ -88,7 +171,9 @@ export default function SpreadsheetPage() {
           <div className="min-w-0">
             <input
               type="text"
-              defaultValue={id === "new" ? "Untitled Spreadsheet" : (sheet?.title || "Loading...")}
+              value={title}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              disabled={!isEditable || !sheet}
               className="bg-transparent text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-primary/20 rounded px-1 transition-all placeholder:text-muted-foreground/50 w-full truncate"
             />
             <div className="flex items-center gap-2 lg:gap-3 text-[10px] sm:text-xs text-muted-foreground px-1 mt-0.5 overflow-x-auto scrollbar-none pb-1">
@@ -104,7 +189,8 @@ export default function SpreadsheetPage() {
         <div className="flex items-center gap-2 ml-auto sm:ml-0">
           <ShareDialog
             documentId={id || ""}
-            documentTitle={id === "new" ? "Untitled Spreadsheet" : "Q1 Budget"}
+            documentTitle={title || "Untitled Spreadsheet"}
+            fileType="spreadsheet"
           />
           <Button
             variant="outline"
@@ -154,6 +240,8 @@ export default function SpreadsheetPage() {
         <SpreadsheetEditor
           spreadsheetId={id || ""}
           onImport={handleImport}
+          isEditable={isEditable}
+          collaborators={collaborators}
         />
 
         {/* Comment Sidebar */}

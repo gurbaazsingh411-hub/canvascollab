@@ -19,9 +19,10 @@ interface SpreadsheetToolbarProps {
   onExport?: () => void;
   cells: Record<string, any>;
   setCells: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+  disabled?: boolean;
 }
 
-export function SpreadsheetToolbar({ spreadsheetId, onImport, onExport, cells, setCells }: SpreadsheetToolbarProps) {
+export function SpreadsheetToolbar({ spreadsheetId, onImport, onExport, cells, setCells, disabled = false }: SpreadsheetToolbarProps) {
   const { toast } = useToast();
 
   const handleExportPDF = async () => {
@@ -72,6 +73,7 @@ export function SpreadsheetToolbar({ spreadsheetId, onImport, onExport, cells, s
   };
 
   const handleImportCSV = () => {
+    if (disabled) return;
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".csv";
@@ -94,6 +96,7 @@ export function SpreadsheetToolbar({ spreadsheetId, onImport, onExport, cells, s
   };
 
   const handleImportXLSX = () => {
+    if (disabled) return;
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".xlsx,.xls";
@@ -196,21 +199,23 @@ export function SpreadsheetToolbar({ spreadsheetId, onImport, onExport, cells, s
     <div className="flex items-center gap-2 border-b border-border p-2 bg-background">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" className="gap-2" disabled={disabled}>
             <Upload className="h-4 w-4" />
             Import
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem onClick={handleImportCSV}>
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Import CSV
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleImportXLSX}>
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Import XLSX
-          </DropdownMenuItem>
-        </DropdownMenuContent>
+        {!disabled && (
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={handleImportCSV}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Import CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleImportXLSX}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Import XLSX
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        )}
       </DropdownMenu>
 
       <DropdownMenu>

@@ -30,6 +30,19 @@ export function useCollaboration(documentId: string | undefined, onMessage?: (pa
     const [userColor] = useState(() => `hsl(${Math.random() * 360}, 70%, 60%)`);
     const lastUpdateRef = useRef<number>(0);
 
+    const onMessageRef = useRef(onMessage);
+    useEffect(() => {
+        onMessageRef.current = onMessage;
+    }, [onMessage]);
+
+    // Keep profile & user in refs to avoid rebuilding channel when profile/user changes slightly
+    const profileRef = useRef(profile);
+    const userRef = useRef(user);
+    useEffect(() => {
+        profileRef.current = profile;
+        userRef.current = user;
+    }, [profile, user]);
+
     useEffect(() => {
         if (!documentId || !user || documentId === "new") return;
 
@@ -62,7 +75,7 @@ export function useCollaboration(documentId: string | undefined, onMessage?: (pa
                 setCollaborators(users);
             })
             .on("broadcast", { event: "change" }, ({ payload }) => {
-                if (onMessage) onMessage(payload);
+                if (onMessageRef.current) onMessageRef.current(payload);
             })
             .subscribe(async (status) => {
                 if (status === "SUBSCRIBED") {
@@ -70,7 +83,7 @@ export function useCollaboration(documentId: string | undefined, onMessage?: (pa
                     // Track this user's presence
                     await newChannel.track({
                         user_id: user.id,
-                        name: profile?.display_name || user.email?.split("@")[0] || "Anonymous",
+                        name: profileRef.current?.display_name || user.email?.split("@")[0] || "Anonymous",
                         email: user.email,
                         color: userColor,
                         online_at: new Date().toISOString(),
@@ -83,7 +96,20 @@ export function useCollaboration(documentId: string | undefined, onMessage?: (pa
             setIsConnected(false);
             setChannel(null);
         };
-    }, [documentId, user, profile, userColor]);
+    }, [documentId, user?.id]);
+
+    // Update presence tracking when connection is active and user/profile updates
+    useEffect(() => {
+        if (!isConnected || !channel || !user) return;
+
+        channel.track({
+            user_id: user.id,
+            name: profile?.display_name || user.email?.split("@")[0] || "Anonymous",
+            email: user.email,
+            color: userColor,
+            online_at: new Date().toISOString(),
+        });
+    }, [channel, isConnected, user?.id, profile?.display_name, userColor]);
 
     const updateCursor = (position: CursorPosition) => {
         if (!channel || !user) return;

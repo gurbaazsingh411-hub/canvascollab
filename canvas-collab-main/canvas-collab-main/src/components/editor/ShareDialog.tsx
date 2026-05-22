@@ -17,24 +17,30 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Share2, Copy, Check, Mail } from "lucide-react";
+import { Share2, Copy, Check, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { supabase } from "@/integrations/supabase/client";
-import { workspacesApi, profilesApi } from "@/lib/api";
+import { workspacesApi, profilesApi, enhancedPermissionsApi } from "@/lib/api";
+import { useCollaborators } from "@/hooks/use-permissions";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ShareDialogProps {
     documentId: string;
     documentTitle: string;
+    fileType?: "document" | "spreadsheet";
 }
 
-export function ShareDialog({ documentId, documentTitle }: ShareDialogProps) {
+export function ShareDialog({ documentId, documentTitle, fileType = "document" }: ShareDialogProps) {
     const [email, setEmail] = useState("");
     const [role, setRole] = useState<"viewer" | "editor" | "owner">("viewer");
     const [copied, setCopied] = useState(false);
     const { addNotification } = useNotifications();
+    const queryClient = useQueryClient();
 
-    const shareLink = `${window.location.origin}/document/${documentId}`;
+    const { data: collaboratorsList, isLoading: isLoadingCollaborators } = useCollaborators(documentId, fileType);
+
+    const shareLink = `${window.location.origin}/${fileType}/${documentId}`;
 
     const handleCopyLink = () => {
         navigator.clipboard.writeText(shareLink);
@@ -63,13 +69,22 @@ export function ShareDialog({ documentId, documentTitle }: ShareDialogProps) {
 
             if (!foundUser) {
                 toast.error("User not found. They must have an account to be added.");
-                // TODO: Could trigger a workspace invite link generation here
+                return;
+            }
+
+            // Check if user is already a collaborator
+            const alreadyExists = collaboratorsList?.some(
+                (c: any) => c.user_id === foundUser.id
+            );
+            if (alreadyExists) {
+                toast.error("User already has access to this file");
                 return;
             }
 
             // 2. Get document details for workspace_id
+            const table = fileType === "spreadsheet" ? "spreadsheets" : "documents";
             const { data: doc } = await supabase
-                .from("documents")
+                .from(table)
                 .select("workspace_id")
                 .eq("id", documentId)
                 .single();
@@ -80,22 +95,29 @@ export function ShareDialog({ documentId, documentTitle }: ShareDialogProps) {
                 console.log(`User ${email} auto-added to workspace ${doc.workspace_id}`);
             }
 
-            // 4. Send invitation (logic for the specific document)
-            // TODO: In a full system, you'd also create document-specific permissions here
+            // 4. Create document/spreadsheet-specific permission
+            await enhancedPermissionsApi.inviteUser({
+                [fileType === "spreadsheet" ? "spreadsheet_id" : "document_id"]: documentId,
+                user_id: foundUser.id,
+                role: role === "owner" ? "editor" : role, // Owner isn't supported as an invite role directly in schema defaults
+            });
+
+            // Invalidate query
+            queryClient.invalidateQueries({ queryKey: ["collaborators", fileType, documentId] });
 
             toast.success(`Invitation shared with ${email}`);
 
             // Add notification for successful invitation
             addNotification({
-                title: "Document Shared",
-                message: `You've shared "${documentTitle}" with ${email} as ${role}. They've been added to the workspace.`,
+                title: `${fileType === "spreadsheet" ? "Spreadsheet" : "Document"} Shared`,
+                message: `You've shared "${documentTitle}" with ${email} as ${role}.`,
                 type: "success",
             });
 
             setEmail("");
         } catch (error) {
             console.error("Invite error:", error);
-            toast.error("Failed to share document");
+            toast.error("Failed to share file");
         }
     };
 
@@ -111,7 +133,7 @@ export function ShareDialog({ documentId, documentTitle }: ShareDialogProps) {
                 <DialogHeader>
                     <DialogTitle>Share "{documentTitle}"</DialogTitle>
                     <DialogDescription>
-                        Invite people to collaborate on this document
+                        Invite people to collaborate on this {fileType}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -134,11 +156,10 @@ export function ShareDialog({ documentId, documentTitle }: ShareDialogProps) {
                                 <SelectContent>
                                     <SelectItem value="viewer">Viewer</SelectItem>
                                     <SelectItem value="editor">Editor</SelectItem>
-                                    <SelectItem value="owner">Owner</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
-                        <Button onClick={handleInvite} className="w-full gap-2">
+                        <Button onClick={handleInvite} className="w-full gap-2 mt-2">
                             <Mail className="h-4 w-4" />
                             Send Invitation
                         </Button>
@@ -148,7 +169,7 @@ export function ShareDialog({ documentId, documentTitle }: ShareDialogProps) {
                     <div className="space-y-2">
                         <Label>Share link</Label>
                         <div className="flex gap-2">
-                            <Input value={shareLink} readOnly className="flex-1" />
+                            <Input value={shareLink} readOnly className="flex-1 text-xs" />
                             <Button
                                 variant="outline"
                                 size="icon"
@@ -162,15 +183,16 @@ export function ShareDialog({ documentId, documentTitle }: ShareDialogProps) {
                                 )}
                             </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                            Anyone with the link can view this document
+                        <p className="text-[10px] text-muted-foreground">
+                            Anyone with the link and appropriate permissions can view this {fileType}
                         </p>
                     </div>
 
                     {/* Current Collaborators */}
                     <div className="space-y-2">
                         <Label>People with access</Label>
-                        <div className="space-y-2">
+                        <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+                            {/* You / Owner */}
                             <div className="flex items-center justify-between rounded-lg border border-border p-2">
                                 <div className="flex items-center gap-2">
                                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -182,6 +204,66 @@ export function ShareDialog({ documentId, documentTitle }: ShareDialogProps) {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Loading Collaborators */}
+                            {isLoadingCollaborators && (
+                                <div className="flex items-center justify-center py-2">
+                                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                </div>
+                            )}
+
+                            {/* Invited Collaborators */}
+                            {collaboratorsList && collaboratorsList.map((collab: any) => (
+                                <div key={collab.id} className="flex items-center justify-between rounded-lg border border-border p-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <div className="h-8 w-8 rounded-full bg-secondary/30 flex items-center justify-center text-xs font-semibold shrink-0">
+                                            {collab.profiles?.display_name?.substring(0, 2).toUpperCase() || collab.profiles?.email?.substring(0, 2).toUpperCase() || "?"}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-medium truncate">{collab.profiles?.display_name || "Unknown User"}</p>
+                                            <p className="text-[10px] text-muted-foreground truncate">{collab.profiles?.email}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <Select
+                                            value={collab.role}
+                                            onValueChange={async (newRole: any) => {
+                                                try {
+                                                    await enhancedPermissionsApi.updateRole(collab.id, newRole);
+                                                    toast.success("Role updated successfully");
+                                                    queryClient.invalidateQueries({ queryKey: ["collaborators", fileType, documentId] });
+                                                } catch (err) {
+                                                    toast.error("Failed to update role");
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-[85px] h-7 text-[10px] px-2">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="viewer">Viewer</SelectItem>
+                                                <SelectItem value="editor">Editor</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-destructive h-7 px-1.5 text-[10px] hover:bg-destructive/10"
+                                            onClick={async () => {
+                                                try {
+                                                    await enhancedPermissionsApi.removeCollaborator(collab.id);
+                                                    toast.success("Collaborator removed");
+                                                    queryClient.invalidateQueries({ queryKey: ["collaborators", fileType, documentId] });
+                                                } catch (err) {
+                                                    toast.error("Failed to remove collaborator");
+                                                }
+                                            }}
+                                        >
+                                            Remove
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>

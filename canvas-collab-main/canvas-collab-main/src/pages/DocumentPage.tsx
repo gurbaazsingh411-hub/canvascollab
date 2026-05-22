@@ -4,7 +4,7 @@ import { DocumentEditor } from "@/components/editor/DocumentEditor";
 import { ShareDialog } from "@/components/editor/ShareDialog";
 import { CommentSidebar } from "@/components/editor/CommentSidebar";
 import { VersionHistory } from "@/components/editor/VersionHistory";
-import { ArrowLeft, MoreHorizontal, MessageSquare, History } from "lucide-react";
+import { ArrowLeft, MoreHorizontal, MessageSquare, History, Lock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,11 +25,39 @@ export default function DocumentPage() {
   const [isCommentSidebarOpen, setIsCommentSidebarOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const { addNotification } = useNotifications();
-  const { data: doc } = useDocument(id);
+  const { data: doc, isLoading } = useDocument(id);
   const createVersion = useCreateDocumentVersion();
 
   // Track activity
   useHeartbeat(doc?.workspace_id, id, "document");
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (id !== "new" && !doc) {
+    return (
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-background px-4">
+        <div className="glass-card flex max-w-md flex-col items-center p-8 text-center rounded-2xl">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 text-destructive mb-6">
+            <Lock className="h-8 w-8" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            You don't have permission to access this document or it does not exist. Please ask the owner to share it with you.
+          </p>
+          <Button onClick={() => navigate("/")} className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleSaveVersion = async () => {
     if (!doc || !id || id === "new") return;
