@@ -863,7 +863,7 @@ export const profilesApi = {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .eq("email", email)
+      .ilike("email", email)
       .maybeSingle();
 
     if (error) throw error;
